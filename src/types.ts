@@ -19,6 +19,8 @@ export interface Party {
   expenses: Expense[];
   createdAt: number;
   updatedAt: number;
+  sealed: boolean;
+  sealedAt?: number;
 }
 
 export interface Snapshot {

@@ -161,18 +161,37 @@ async function loadParty(id) {
 function renderParty() {
   const p = currentParty;
   const app = document.getElementById('app');
+
+  if (p.sealed) {
+    renderSealedParty(p);
+    return;
+  }
+
+  const inviteUrl = location.origin + '/#/party/' + p.id;
   app.innerHTML = \`
     <div class="fade-in space-y-6">
       <!-- Header -->
-      <div class="flex items-start justify-between">
+      <div class="flex items-start justify-between gap-3">
         <div>
           <h2 class="text-2xl font-bold text-gray-900">\${escHtml(p.name)}</h2>
           <p class="text-sm text-gray-500 mt-0.5">\${p.people.length} people · \${p.expenses.length} expenses</p>
         </div>
-        <button onclick="createShare()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-          Share
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="showInviteModal()" class="flex items-center gap-1.5 border border-brand-600 text-brand-600 hover:bg-brand-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            Invite
+          </button>
+          <button onclick="confirmSeal()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            Seal
+          </button>
+        </div>
+      </div>
+
+      <!-- Invite hint -->
+      <div class="bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 flex items-center gap-3 text-sm text-brand-700">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        <span>Share this page with friends so they can add themselves and expenses. Hit <strong>Seal</strong> when done to lock it.</span>
       </div>
 
       <!-- People -->
@@ -208,6 +227,63 @@ function renderParty() {
       \${p.people.length >= 2 && p.expenses.length > 0 ? renderSettlements(p) : ''}
     </div>
   \`;
+  if (p.people.length >= 2 && p.expenses.length > 0) {
+    loadSettlements();
+  }
+}
+
+function renderSealedParty(p) {
+  const app = document.getElementById('app');
+  const peopleMap = Object.fromEntries(p.people.map(pr => [pr.id, pr.name]));
+  app.innerHTML = \`
+    <div class="fade-in space-y-6">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">\${escHtml(p.name)}</h2>
+          <p class="text-sm text-gray-500 mt-0.5">\${p.people.length} people · \${p.expenses.length} expenses</p>
+        </div>
+      </div>
+
+      <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-amber-700">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        Sealed\${p.sealedAt ? ' · ' + new Date(p.sealedAt).toLocaleString() : ''} — this party is locked and cannot be modified.
+      </div>
+
+      <div class="bg-white rounded-2xl border border-gray-200 p-5">
+        <h3 class="font-semibold text-gray-900 mb-2">People</h3>
+        <div class="flex flex-wrap gap-2">
+          \${p.people.map(pr => \`<span class="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-full">\${escHtml(pr.name)}</span>\`).join('')}
+        </div>
+      </div>
+
+      \${p.expenses.length > 0 ? \`
+        <div class="bg-white rounded-2xl border border-gray-200 p-5">
+          <h3 class="font-semibold text-gray-900 mb-3">Expenses</h3>
+          <div class="space-y-2">
+            \${[...p.expenses].reverse().map(e => \`
+              <div class="flex items-start justify-between py-2 border-b border-gray-100 last:border-0">
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium text-gray-900 text-sm truncate">\${escHtml(e.description)}</div>
+                  <div class="text-xs text-gray-500">Paid by \${escHtml(peopleMap[e.paidBy] || '?')} · Split: \${e.splitBetween.length > 0 ? e.splitBetween.map(id => escHtml(peopleMap[id] || '?')).join(', ') : 'everyone'}</div>
+                </div>
+                <span class="font-semibold text-gray-900 ml-3">$\${e.amount.toFixed(2)}</span>
+              </div>
+            \`).join('')}
+          </div>
+          <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between text-sm font-semibold text-gray-900">
+            <span>Total</span>
+            <span>$\${p.expenses.reduce((s,e) => s + e.amount, 0).toFixed(2)}</span>
+          </div>
+        </div>
+      \` : ''}
+
+      <div id="settlementCard" class="bg-white rounded-2xl border border-gray-200 p-5">
+        <h3 class="font-semibold text-gray-900 mb-1">Settlement</h3>
+        <div id="settlementBody" class="text-sm text-gray-500">Calculating…</div>
+      </div>
+    </div>
+  \`;
+  loadSettlements();
 }
 
 function renderExpenseForm(p) {
@@ -327,7 +403,6 @@ async function addPerson() {
   currentParty = res;
   renderParty();
   document.getElementById('personInput')?.focus();
-  if (currentParty.expenses.length > 0) loadSettlements();
 }
 
 async function removePerson(personId) {
@@ -336,7 +411,6 @@ async function removePerson(personId) {
   if (res.error) return alert(res.error);
   currentParty = res;
   renderParty();
-  if (currentParty.expenses.length > 0) loadSettlements();
 }
 
 // ── Expense actions ───────────────────────────────────────────────────────────
@@ -360,7 +434,6 @@ async function addExpense() {
   if (res.error) return alert(res.error);
   currentParty = res;
   renderParty();
-  loadSettlements();
 }
 
 async function removeExpense(expenseId) {
@@ -368,7 +441,6 @@ async function removeExpense(expenseId) {
   if (res.error) return alert(res.error);
   currentParty = res;
   renderParty();
-  if (currentParty.expenses.length > 0) loadSettlements();
 }
 
 function toggleAllSplit() {
@@ -377,7 +449,36 @@ function toggleAllSplit() {
   cbs.forEach(c => c.checked = !allChecked);
 }
 
-// ── Share ─────────────────────────────────────────────────────────────────────
+// ── Invite ────────────────────────────────────────────────────────────────────
+
+function showInviteModal() {
+  const url = location.origin + '/#/party/' + currentPartyId;
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 fade-in';
+  overlay.innerHTML = \`
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+      <h3 class="text-lg font-bold text-gray-900 mb-1">Invite friends</h3>
+      <p class="text-sm text-gray-500 mb-4">Anyone with this link can add themselves and record expenses. Hit <strong>Seal</strong> when everyone is done.</p>
+      <div class="flex gap-2">
+        <input value="\${url}" readonly class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none">
+        <button onclick="copyUrl('\${url}', this)" class="bg-brand-600 hover:bg-brand-700 text-white text-sm px-3 py-2 rounded-lg transition-colors shrink-0">Copy</button>
+      </div>
+      <button onclick="this.closest('.fixed').remove()" class="mt-4 w-full text-sm text-gray-500 hover:text-gray-700">Close</button>
+    </div>
+  \`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function confirmSeal() {
+  if (!confirm('Seal this party? No one will be able to add or remove people or expenses after this.')) return;
+  const res = await api('POST', '/api/parties/' + currentPartyId + '/seal');
+  if (res.error) return alert(res.error);
+  currentParty = res;
+  renderParty();
+}
+
+// ── Share (immutable snapshot) ────────────────────────────────────────────────
 
 async function createShare() {
   const res = await api('POST', '/api/parties/' + currentPartyId + '/share');
@@ -522,14 +623,6 @@ async function api(method, path, body) {
   }
 }
 
-// After renderParty, load settlements
-const origRenderParty = renderParty;
-function renderParty() {
-  origRenderParty();
-  if (currentParty && currentParty.expenses.length > 0 && currentParty.people.length >= 2) {
-    loadSettlements();
-  }
-}
 </script>
 </body>
 </html>`;

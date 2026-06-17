@@ -23,6 +23,7 @@ app.post('/api/parties', async c => {
     expenses: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    sealed: false,
   };
 
   await c.env.PARTIES.put(`party:${party.id}`, JSON.stringify(party));
@@ -35,10 +36,24 @@ app.get('/api/parties/:id', async c => {
   return c.json(party);
 });
 
+// Seal party
+app.post('/api/parties/:id/seal', async c => {
+  const party = await getParty(c.env, c.req.param('id'));
+  if (!party) return c.json({ error: 'Party not found' }, 404);
+  if (party.sealed) return c.json({ error: 'Party is already sealed' }, 400);
+
+  party.sealed = true;
+  party.sealedAt = Date.now();
+  party.updatedAt = Date.now();
+  await saveParty(c.env, party);
+  return c.json(party);
+});
+
 // Add person
 app.post('/api/parties/:id/people', async c => {
   const party = await getParty(c.env, c.req.param('id'));
   if (!party) return c.json({ error: 'Party not found' }, 404);
+  if (party.sealed) return c.json({ error: 'This party is sealed and cannot be modified.' }, 403);
 
   const { name } = await c.req.json<{ name: string }>();
   if (!name?.trim()) return c.json({ error: 'Name is required' }, 400);
@@ -53,6 +68,7 @@ app.post('/api/parties/:id/people', async c => {
 app.delete('/api/parties/:id/people/:personId', async c => {
   const party = await getParty(c.env, c.req.param('id'));
   if (!party) return c.json({ error: 'Party not found' }, 404);
+  if (party.sealed) return c.json({ error: 'This party is sealed and cannot be modified.' }, 403);
 
   const personId = c.req.param('personId');
   party.people = party.people.filter(p => p.id !== personId);
@@ -70,6 +86,7 @@ app.delete('/api/parties/:id/people/:personId', async c => {
 app.post('/api/parties/:id/expenses', async c => {
   const party = await getParty(c.env, c.req.param('id'));
   if (!party) return c.json({ error: 'Party not found' }, 404);
+  if (party.sealed) return c.json({ error: 'This party is sealed and cannot be modified.' }, 403);
 
   const { description, amount, paidBy, splitBetween } = await c.req.json<{
     description: string; amount: number; paidBy: string; splitBetween: string[];
@@ -96,6 +113,7 @@ app.post('/api/parties/:id/expenses', async c => {
 app.delete('/api/parties/:id/expenses/:expenseId', async c => {
   const party = await getParty(c.env, c.req.param('id'));
   if (!party) return c.json({ error: 'Party not found' }, 404);
+  if (party.sealed) return c.json({ error: 'This party is sealed and cannot be modified.' }, 403);
 
   party.expenses = party.expenses.filter(e => e.id !== c.req.param('expenseId'));
   party.updatedAt = Date.now();
@@ -110,7 +128,7 @@ app.get('/api/parties/:id/settlements', async c => {
   return c.json({ settlements: calculateSettlements(party) });
 });
 
-// Create snapshot (share)
+// Create snapshot (immutable share)
 app.post('/api/parties/:id/share', async c => {
   const party = await getParty(c.env, c.req.param('id'));
   if (!party) return c.json({ error: 'Party not found' }, 404);
