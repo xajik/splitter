@@ -1,0 +1,9 @@
+name = "splitter"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "PARTIES"
+id = "6129d596f5874f99887744d201647bef"
+preview_id = "55bec39fbc664a12b3430b6cf75f0025"
