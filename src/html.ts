@@ -33,19 +33,15 @@ tailwind.config = {
   </div>
 </nav>
 
-<main class="max-w-2xl mx-auto px-4 py-6 pb-20" id="app"></main>
+<main class="max-w-2xl mx-auto px-4 py-6 pb-12" id="app"></main>
 
-<footer class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-200 z-40">
-  <div class="max-w-2xl mx-auto px-4 h-12 flex items-center justify-center gap-10">
-    <div class="text-center">
-      <div class="text-[10px] uppercase tracking-wide text-gray-400 leading-none mb-0.5">Bills</div>
-      <div class="text-sm font-bold text-gray-800 tabular-nums" id="statBills">0</div>
-    </div>
-    <div class="w-px h-6 bg-gray-200"></div>
-    <div class="text-center">
-      <div class="text-[10px] uppercase tracking-wide text-gray-400 leading-none mb-0.5">Money managed</div>
-      <div class="text-sm font-bold text-gray-800 tabular-nums" id="statTotal">$0.00</div>
-    </div>
+<footer class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t border-gray-100 z-40">
+  <div class="max-w-2xl mx-auto px-4 h-8 flex items-center justify-center gap-1.5 text-[11px] text-gray-400">
+    <span id="statBills" class="tabular-nums text-gray-500 font-medium">0</span>
+    <span>bills</span>
+    <span class="text-gray-200 mx-1">·</span>
+    <span>total</span>
+    <span id="statTotal" class="tabular-nums text-gray-500 font-medium">$0.00</span>
   </div>
 </footer>
 
@@ -55,7 +51,7 @@ let currentPartyId = null;
 let currentParty   = null;
 let formPayer      = null;   // person id | null → default to first
 let formSplitSet   = null;   // Set of ids | null → all
-let settlementOpen = false;
+let settlementOpen = true;
 let _confirmCb     = null;
 
 // Full Tailwind class strings so CDN picks them up
@@ -245,9 +241,10 @@ function renderParty() {
       <!-- People row -->
       <div class="bg-white rounded-xl border border-gray-200 px-3 py-2.5 flex items-center gap-2 flex-wrap">
         \${p.people.map((pr, i) => \`
-          <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full \${COLORS[i % COLORS.length].base}">
+          <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+            <span class="w-1.5 h-1.5 rounded-full \${COLORS[i % COLORS.length].active.split(' ')[0]} inline-block"></span>
             \${escHtml(pr.name)}
-            <button onclick="removePerson('\${pr.id}')" class="opacity-40 hover:opacity-100 transition-opacity leading-none ml-0.5">✕</button>
+            <button onclick="removePerson('\${pr.id}')" class="opacity-30 hover:opacity-80 transition-opacity leading-none ml-0.5">✕</button>
           </span>
         \`).join('')}
         <div class="flex items-center gap-1 ml-auto">
@@ -500,7 +497,8 @@ async function loadSettlements() {
   const res = await api('GET', '/api/parties/' + currentPartyId + '/settlements');
   if (!res || res.error) return;
 
-  const peopleMap = Object.fromEntries(currentParty.people.map(pr => [pr.id, pr.name]));
+  const people = currentParty.people;
+  const peopleMap = Object.fromEntries(people.map(pr => [pr.id, pr.name]));
   const summary = document.getElementById('settlementSummary');
   const body    = document.getElementById('settlementBody');
 
@@ -517,12 +515,20 @@ async function loadSettlements() {
     summary.textContent = lines.length > 1 ? lines[0] + \` +\${lines.length-1} more\` : lines[0];
   }
   if (body) {
-    body.innerHTML = \`<div class="space-y-2">\${res.settlements.map(s => \`
-      <div class="flex items-center justify-between">
-        <span class="text-gray-700">\${escHtml(peopleMap[s.from]||'?')} owes \${escHtml(peopleMap[s.to]||'?')}</span>
-        <span class="font-semibold text-gray-900">$\${s.amount.toFixed(2)}</span>
-      </div>
-    \`).join('')}</div>\`;
+    body.innerHTML = \`<div class="space-y-2">\${res.settlements.map(s => {
+      const fromClr = clr(people, s.from);
+      const toClr   = clr(people, s.to);
+      return \`
+        <div class="flex items-center justify-between gap-3 py-0.5">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full \${fromClr.base} shrink-0">\${escHtml(peopleMap[s.from]||'?')}</span>
+            <span class="text-gray-400 text-xs">→</span>
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full \${toClr.base} shrink-0">\${escHtml(peopleMap[s.to]||'?')}</span>
+          </div>
+          <span class="font-semibold text-gray-900 tabular-nums text-sm shrink-0">$\${s.amount.toFixed(2)}</span>
+        </div>
+      \`;
+    }).join('')}</div>\`;
   }
 }
 
