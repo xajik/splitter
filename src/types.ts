@@ -7,9 +7,22 @@ export interface Expense {
   id: string;
   description: string;
   amount: number;
-  paidBy: string; // person id
-  splitBetween: string[]; // person ids, empty = everyone
+  paidBy: string;
+  splitBetween: string[];
   date: number;
+}
+
+export type ReceiptStatus = 'pending' | 'processing' | 'done' | 'error';
+
+export interface Receipt {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: number;
+  status: ReceiptStatus;
+  extractedAmount?: number;
+  extractedText?: string;
 }
 
 export interface Party {
@@ -17,6 +30,7 @@ export interface Party {
   name: string;
   people: Person[];
   expenses: Expense[];
+  receipts: Receipt[];
   createdAt: number;
   updatedAt: number;
   sealed: boolean;
@@ -31,11 +45,13 @@ export interface Snapshot {
 }
 
 export interface Settlement {
-  from: string; // person id
-  to: string;   // person id
+  from: string;
+  to: string;
   amount: number;
 }
 
 export interface Env {
   PARTIES: KVNamespace;
+  RECEIPTS: R2Bucket;
+  AI: Ai;
 }
