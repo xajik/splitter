@@ -207,9 +207,9 @@ app.post('/api/parties/:id/receipts/:rid/extract', async c => {
   try {
     const buffer = await obj.arrayBuffer();
 
-    const result = await (c.env.AI as any).run('@cf/llava-1.5-7b-hf', {
+    const result = await (c.env.AI as any).run('@cf/llava-hf/llava-1.5-7b-hf', {
       image: [...new Uint8Array(buffer)],
-      prompt: 'This is a receipt or bill. Find the TOTAL amount charged. Reply with ONLY the number, e.g.: 47.50',
+      prompt: 'This is a receipt. What is the final TOTAL amount to pay? Reply with ONLY the number, e.g.: 47.50',
       max_tokens: 64,
     });
 
@@ -222,8 +222,9 @@ app.post('/api/parties/:id/receipts/:rid/extract', async c => {
 
     // Increment monthly counter (TTL = 37 days)
     await c.env.PARTIES.put(monthKey, String(used + 1), { expirationTtl: 86400 * 37 });
-  } catch {
+  } catch (err) {
     receipt.status = 'error';
+    receipt.extractedText = String(err).slice(0, 300);
   }
 
   party.updatedAt = Date.now();
