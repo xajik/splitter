@@ -180,6 +180,27 @@ app.delete('/api/parties/:id/receipts/:rid', async c => {
   return c.json(party);
 });
 
+// Neuron budget: 10,000/day free tier. We use ~2000 per vision call (safe estimate).
+// Actual neurons = total_tokens × ~3 for an 11B model; image adds ~512 tokens.
+const DAILY_NEURON_LIMIT = 10_000;
+const NEURON_COST_PER_TOKEN = 3;       // conservative rate for 11B vision model
+const NEURON_COST_ESTIMATE = 2_000;    // fallback if usage not returned
+const NEURON_BUFFER = 500;             // don't go below this before blocking
+
+function todayKey() {
+  return `ai:neurons:${new Date().toISOString().slice(0, 10)}`; // YYYY-MM-DD UTC
+}
+
+app.get('/api/ai/quota', async c => {
+  const used = parseInt((await c.env.PARTIES.get(todayKey())) ?? '0');
+  return c.json({
+    used,
+    limit: DAILY_NEURON_LIMIT,
+    remaining: Math.max(0, DAILY_NEURON_LIMIT - used),
+    canExtract: used + NEURON_COST_ESTIMATE <= DAILY_NEURON_LIMIT - NEURON_BUFFER,
+  });
+});
+
 app.post('/api/parties/:id/receipts/:rid/extract', async c => {
   const party = await getParty(c.env, c.req.param('id'));
   if (!party) return c.json({ error: 'Party not found' }, 404);
@@ -189,25 +210,30 @@ app.post('/api/parties/:id/receipts/:rid/extract', async c => {
   const receipt = party.receipts.find(r => r.id === rid);
   if (!receipt) return c.json({ error: 'Receipt not found' }, 404);
 
-  // Quota guard — 500 AI calls per month (free tier safety)
-  const monthKey = `ai:count:${new Date().toISOString().slice(0, 7)}`;
-  const used = parseInt((await c.env.PARTIES.get(monthKey)) ?? '0');
-  if (used >= 500) {
-    return c.json({ error: 'Monthly AI extraction limit reached (500). Resets next month.' }, 429);
+  // Daily neuron quota check (2,000 neurons per vision call, conservative)
+  const dayKey = todayKey();
+  const neuronsUsed = parseInt((await c.env.PARTIES.get(dayKey)) ?? '0');
+  if (neuronsUsed + NEURON_COST_ESTIMATE > DAILY_NEURON_LIMIT - NEURON_BUFFER) {
+    return c.json({
+      error: `Daily AI quota reached (${neuronsUsed.toLocaleString()} / ${DAILY_NEURON_LIMIT.toLocaleString()} neurons). Resets at midnight UTC.`,
+    }, 429);
   }
+
+  // Commit budget BEFORE calling AI — ensures we never go over even on failure
+  const neuronsAfter = neuronsUsed + NEURON_COST_ESTIMATE;
+  await c.env.PARTIES.put(dayKey, String(neuronsAfter), { expirationTtl: 86400 * 2 });
 
   // Get image from R2
   const obj = await c.env.RECEIPTS.get(`${party.id}/${rid}`);
   if (!obj) return c.json({ error: 'Receipt image not found in storage' }, 404);
 
-  // Mark as processing immediately
+  // Mark as processing
   receipt.status = 'processing';
   await saveParty(c.env, party);
 
   try {
     const buffer = await obj.arrayBuffer();
 
-    // Convert image to base64 for the vision model
     const uint8 = new Uint8Array(buffer);
     let binary = '';
     for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
@@ -230,9 +256,6 @@ app.post('/api/parties/:id/receipts/:rid/extract', async c => {
     receipt.status = 'done';
     receipt.extractedAmount = amount ?? undefined;
     receipt.extractedText = rawText.slice(0, 300);
-
-    // Increment monthly counter (TTL = 37 days)
-    await c.env.PARTIES.put(monthKey, String(used + 1), { expirationTtl: 86400 * 37 });
   } catch (err) {
     receipt.status = 'error';
     receipt.extractedText = String(err).slice(0, 300);
@@ -240,7 +263,18 @@ app.post('/api/parties/:id/receipts/:rid/extract', async c => {
 
   party.updatedAt = Date.now();
   await saveParty(c.env, party);
-  return c.json(party);
+
+  // Return party + updated quota so UI can refresh without a second round-trip
+  const canExtract = neuronsAfter + NEURON_COST_ESTIMATE <= DAILY_NEURON_LIMIT - NEURON_BUFFER;
+  return c.json({
+    ...party,
+    aiQuota: {
+      used: neuronsAfter,
+      limit: DAILY_NEURON_LIMIT,
+      remaining: Math.max(0, DAILY_NEURON_LIMIT - neuronsAfter),
+      canExtract,
+    },
+  });
 });
 
 // ── Share / Snapshot ──────────────────────────────────────────────────────────

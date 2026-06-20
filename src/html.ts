@@ -68,6 +68,7 @@ let formPayer      = null;
 let formSplitSet   = null;
 let settlementOpen = true;
 let _confirmCb     = null;
+let aiQuota        = null; // { used, limit, remaining, canExtract }
 
 // Person chip colors — no green, no indigo (reserved for brand)
 const COLORS = [
@@ -226,9 +227,13 @@ async function createParty() {
 async function loadParty(id) {
   currentPartyId = id;
   showLoading();
-  const res = await api('GET', '/api/parties/' + id);
+  const [res, quota] = await Promise.all([
+    api('GET', '/api/parties/' + id),
+    api('GET', '/api/ai/quota'),
+  ]);
   if (res.error) return showError(res.error);
   currentParty = res;
+  aiQuota = quota.error ? null : quota;
   formPayer = null; formSplitSet = null;
   addToHistory({ id: res.id, name: res.name, date: Date.now(), type: 'party' });
   renderParty();
@@ -361,10 +366,31 @@ function renderParty() {
 function renderReceiptsSection(p, editable) {
   const receipts = p.receipts || [];
   const canUpload = editable && receipts.length < 100;
+  const quota = aiQuota;
+  const canExtract = !quota || quota.canExtract;
+
+  // Quota meter (only shown in editable view when quota is loaded)
+  function quotaMeter() {
+    if (!editable || !quota) return '';
+    const pct = Math.min(100, Math.round((quota.used / quota.limit) * 100));
+    const barColor = pct >= 90 ? 'bg-red-400' : pct >= 70 ? 'bg-amber-400' : 'bg-brand-400';
+    const label = !canExtract
+      ? \`<span class="text-[10px] text-red-400 font-medium">Limit reached · resets midnight UTC</span>\`
+      : \`<span class="text-[10px] text-gray-400">\${quota.used.toLocaleString()} / \${quota.limit.toLocaleString()} neurons today</span>\`;
+    return \`
+      <div class="flex items-center gap-2">
+        \${label}
+        <div class="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
+          <div class="\${barColor} h-full rounded-full transition-all" style="width:\${pct}%"></div>
+        </div>
+      </div>
+    \`;
+  }
 
   const rows = receipts.map(r => {
     const hasAmt = r.status === 'done' && r.extractedAmount != null;
     const imgUrl = '/receipt/' + p.id + '/' + r.id;
+    const canExtractThis = editable && (r.status === 'pending' || r.status === 'error');
     return \`
       <div class="flex items-center gap-3 px-4 py-2.5 \${editable ? 'hover:bg-gray-50' : ''} transition-colors">
         <div class="w-9 h-9 shrink-0 rounded-lg overflow-hidden border border-gray-100 bg-gray-100 flex items-center justify-center">
@@ -381,9 +407,10 @@ function renderReceiptsSection(p, editable) {
             <span class="text-sm font-semibold text-gray-900">$\${r.extractedAmount.toFixed(2)}</span>
             \${editable ? \`<button onclick="useReceiptAmount(\${r.extractedAmount})" class="text-[10px] font-medium bg-brand-100 text-brand-700 hover:bg-brand-200 px-2 py-1 rounded-lg transition-colors">Use</button>\` : ''}
           \` : ''}
-          \${editable && (r.status === 'pending' || r.status === 'error') ? \`
-            <button onclick="extractReceipt('\${r.id}')" class="text-[10px] font-medium text-brand-600 hover:text-brand-700 border border-brand-200 hover:border-brand-400 px-2 py-1 rounded-lg transition-colors">Extract →</button>
-          \` : ''}
+          \${canExtractThis ? (canExtract
+            ? \`<button onclick="extractReceipt('\${r.id}')" class="text-[10px] font-medium text-brand-600 hover:text-brand-700 border border-brand-200 hover:border-brand-400 px-2 py-1 rounded-lg transition-colors">Extract →</button>\`
+            : \`<span class="text-[10px] text-gray-300" title="Daily AI quota reached">Extract →</span>\`
+          ) : ''}
           \${editable ? \`
             <button onclick="deleteReceipt('\${r.id}')" class="text-gray-300 hover:text-red-400 transition-colors">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -402,12 +429,15 @@ function renderReceiptsSection(p, editable) {
           Receipts
           \${receipts.length > 0 ? \`<span class="text-[10px] font-normal text-gray-400">\${receipts.length}/100</span>\` : ''}
         </span>
-        \${canUpload ? \`
-          <label class="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors flex items-center gap-1">
-            Attach
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/heic" class="hidden" onchange="uploadReceipt(this)">
-          </label>
-        \` : ''}
+        <div class="flex items-center gap-3">
+          \${quotaMeter()}
+          \${canUpload ? \`
+            <label class="cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors">
+              Attach
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/heic" class="hidden" onchange="uploadReceipt(this)">
+            </label>
+          \` : ''}
+        </div>
       </div>
       \${receipts.length > 0 ? \`<div class="divide-y divide-gray-100">\${rows}</div>\` : (
         editable ? \`
@@ -571,11 +601,19 @@ async function extractReceipt(rid) {
   if (res.error) {
     const r2 = (currentParty.receipts || []).find(x => x.id === rid);
     if (r2) r2.status = 'error';
+    // Refresh quota in case quota-exceeded error
+    const q = await api('GET', '/api/ai/quota');
+    if (!q.error) aiQuota = q;
     renderParty();
     alert(res.error);
     return;
   }
-  currentParty = res; renderParty();
+  // Response includes updated quota — no extra round-trip needed
+  if (res.aiQuota) aiQuota = res.aiQuota;
+  // Strip aiQuota from party data before storing
+  const { aiQuota: _q, ...party } = res;
+  currentParty = party;
+  renderParty();
 }
 
 async function deleteReceipt(rid) {
