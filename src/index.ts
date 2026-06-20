@@ -100,14 +100,16 @@ app.post('/api/parties/:id/expenses', async c => {
   if (!description?.trim()) return c.json({ error: 'Description required' }, 400);
   if (!amount || amount <= 0) return c.json({ error: 'Amount must be positive' }, 400);
   if (!party.people.find(p => p.id === paidBy)) return c.json({ error: 'Payer not found' }, 400);
+  const cleanAmount = Math.round(amount * 100) / 100;
   party.expenses.push({
     id: nanoid(8),
     description: description.trim().slice(0, 100),
-    amount: Math.round(amount * 100) / 100,
+    amount: cleanAmount,
     paidBy, splitBetween: splitBetween ?? [], date: Date.now(),
   });
   party.updatedAt = Date.now();
   await saveParty(c.env, party);
+  await bumpGlobalStats(c.env, cleanAmount);
   return c.json(party);
 });
 
@@ -296,7 +298,70 @@ app.get('/api/share/:id', async c => {
   return c.json({ ...snapshot, settlements: calculateSettlements(snapshot.party) });
 });
 
+// ── Stats & batch summaries (for home dashboard) ──────────────────────────────
+
+app.get('/api/stats', async c => {
+  const [bills, money] = await Promise.all([
+    c.env.PARTIES.get('stats:bills'),
+    c.env.PARTIES.get('stats:money'),
+  ]);
+  return c.json({
+    billsSettled: parseInt(bills ?? '0'),
+    moneySplit: parseFloat(money ?? '0'),
+  });
+});
+
+// Fetch lightweight summaries for a list of party/snapshot ids (home recent list)
+app.post('/api/summaries', async c => {
+  const { items } = await c.req.json<{ items: { id: string; type: string }[] }>();
+  if (!Array.isArray(items)) return c.json({ summaries: [] });
+
+  const summaries = await Promise.all(items.slice(0, 20).map(async ({ id, type }) => {
+    try {
+      if (type === 'share') {
+        const raw = await c.env.PARTIES.get(`snapshot:${id}`);
+        if (!raw) return null;
+        const snap: Snapshot = JSON.parse(raw);
+        const p = snap.party;
+        return {
+          id, type, name: p.name,
+          people: p.people.length,
+          total: p.expenses.reduce((s, e) => s + e.amount, 0),
+          sealed: true,
+          settled: calculateSettlements(p).length === 0,
+          date: snap.createdAt,
+        };
+      }
+      const p = await getParty(c.env, id);
+      if (!p) return null;
+      return {
+        id, type: 'party', name: p.name,
+        people: p.people.length,
+        total: p.expenses.reduce((s, e) => s + e.amount, 0),
+        sealed: p.sealed,
+        settled: p.sealed || calculateSettlements(p).length === 0,
+        date: p.updatedAt,
+      };
+    } catch {
+      return null;
+    }
+  }));
+
+  return c.json({ summaries: summaries.filter(Boolean) });
+});
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function bumpGlobalStats(env: Env, amount: number): Promise<void> {
+  const [bills, money] = await Promise.all([
+    env.PARTIES.get('stats:bills'),
+    env.PARTIES.get('stats:money'),
+  ]);
+  await Promise.all([
+    env.PARTIES.put('stats:bills', String(parseInt(bills ?? '0') + 1)),
+    env.PARTIES.put('stats:money', String(Math.round((parseFloat(money ?? '0') + amount) * 100) / 100)),
+  ]);
+}
 
 async function getParty(env: Env, id: string): Promise<Party | null> {
   const raw = await env.PARTIES.get(`party:${id}`);
