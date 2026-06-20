@@ -207,13 +207,24 @@ app.post('/api/parties/:id/receipts/:rid/extract', async c => {
   try {
     const buffer = await obj.arrayBuffer();
 
-    const result = await (c.env.AI as any).run('@cf/llava-hf/llava-1.5-7b-hf', {
-      image: [...new Uint8Array(buffer)],
-      prompt: 'This is a receipt. What is the final TOTAL amount to pay? Reply with ONLY the number, e.g.: 47.50',
+    // Convert image to base64 for the vision model
+    const uint8 = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+    const b64 = btoa(binary);
+
+    const result = await (c.env.AI as any).run('@cf/meta/llama-3.2-11b-vision-instruct', {
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: `data:${receipt.mimeType};base64,${b64}` } },
+          { type: 'text', text: 'This is a receipt or bill. What is the final TOTAL amount to pay? Reply with ONLY the number, e.g.: 47.50. No currency symbol, no text, just the number.' },
+        ],
+      }],
       max_tokens: 64,
     });
 
-    const rawText: string = result?.description ?? result?.response ?? '';
+    const rawText: string = result?.response ?? result?.description ?? '';
     const amount = parseReceiptAmount(rawText);
 
     receipt.status = 'done';
