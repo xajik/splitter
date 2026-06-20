@@ -368,8 +368,7 @@ function renderReceiptsSection(p, editable) {
     return \`
       <div class="flex items-center gap-3 px-4 py-2.5 \${editable ? 'hover:bg-gray-50' : ''} transition-colors">
         <div class="w-9 h-9 shrink-0 rounded-lg overflow-hidden border border-gray-100 bg-gray-100 flex items-center justify-center">
-          <img src="\${imgUrl}" loading="lazy" class="w-full h-full object-cover"
-            onerror="this.parentElement.innerHTML='<svg class=\\\\\\"w-4 h-4 text-gray-300\\\\\\" fill=\\\\\\"none\\\\\\" stroke=\\\\\\"currentColor\\\\\\" viewBox=\\\\\\"0 0 24 24\\\\\\"><path stroke-linecap=\\\\\\"round\\\\\\" stroke-linejoin=\\\\\\"round\\\\\\" stroke-width=\\\\\\"2\\\\\\" d=\\\\\\"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z\\\\\\"/></svg>'">
+          <img src="\${imgUrl}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none'">
         </div>
         <div class="flex-1 min-w-0">
           <div class="text-xs font-medium text-gray-700 truncate">\${escHtml(r.filename)}</div>
