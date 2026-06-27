@@ -28,7 +28,7 @@ body { background: #f4f4f5; }
   </button>
 </header>
 
-<main class="max-w-2xl mx-auto px-5 py-4 pb-16" id="app"></main>
+<main class="max-w-2xl mx-auto px-5 py-4 pb-10" id="app"></main>
 
 <script>
 const API = '';
@@ -55,6 +55,16 @@ const COLORS = [
 function clr(people, pid) {
   const i = people.findIndex(p => p.id === pid);
   return i >= 0 ? COLORS[i % COLORS.length] : { base: 'bg-gray-100 text-gray-500', active: 'bg-gray-400 text-white' };
+}
+
+// Unified person chip — one visual language everywhere.
+// state: 'on' (colored), 'active' (payer-selected, solid), 'off' (muted, deselected)
+function personChip(people, pid, name, state) {
+  const c = clr(people, pid);
+  const cls = state === 'active' ? c.active
+    : state === 'off' ? 'bg-gray-100 text-gray-400'
+    : c.base;
+  return '<span class="text-xs font-medium px-2.5 py-1 rounded-full ' + cls + '">' + escHtml(name) + '</span>';
 }
 
 // ── Formatters ───────────────────────────────────────────────────────────────
@@ -142,10 +152,7 @@ function renderHome() {
       <!-- Recent Parties -->
       <section>
         <div class="flex items-end justify-between mb-3">
-          <div>
-            <h2 class="text-xl font-bold tracking-tight">Recent Parties</h2>
-            <p class="text-sm text-gray-400">Your latest shared activities.</p>
-          </div>
+          <h2 class="text-xl font-bold tracking-tight">Recent Parties</h2>
           <button id="recentMore" onclick="goHome()" class="hidden text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5">
             See More <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
           </button>
@@ -157,15 +164,15 @@ function renderHome() {
 
       <!-- Statistics -->
       <section>
-        <div class="mb-3">
-          <h2 class="text-xl font-bold tracking-tight">Statistics</h2>
-          <p class="text-sm text-gray-400">Your financial overview.</p>
-        </div>
+        <h2 class="text-xl font-bold tracking-tight mb-3">Statistics</h2>
         <div id="statsCard"></div>
       </section>
 
       <!-- Global totals -->
-      <div id="globalStats" class="border-t border-gray-200 pt-6 flex items-end justify-between"></div>
+      <div class="border-t border-gray-200 pt-5">
+        <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-3 text-center">Splitter community, all time</div>
+        <div id="globalStats" class="flex items-center justify-between"></div>
+      </div>
 
     </div>
   \`;
@@ -240,19 +247,11 @@ function renderStatsCard(summaries) {
   const people = summaries.reduce((a, s) => a + s.people, 0);
   const groups = summaries.length;
 
+  const pendingPct = grand > 0 ? Math.round((pendingTotal / grand) * 100) : 0;
+
   card.innerHTML = \`
-    <div class="rounded-2xl p-6 relative overflow-hidden" style="background:#1c1c1e;">
-      <!-- faint bar decoration -->
-      <svg class="absolute right-4 bottom-0 opacity-[0.07] pointer-events-none" width="180" height="90" viewBox="0 0 180 90" fill="white">
-        <rect x="10"  y="50" width="14" height="40" rx="2"/>
-        <rect x="34"  y="35" width="14" height="55" rx="2"/>
-        <rect x="58"  y="20" width="14" height="70" rx="2"/>
-        <rect x="82"  y="40" width="14" height="50" rx="2"/>
-        <rect x="106" y="10" width="14" height="80" rx="2"/>
-        <rect x="130" y="30" width="14" height="60" rx="2"/>
-        <rect x="154" y="48" width="14" height="42" rx="2"/>
-      </svg>
-      <div class="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+    <div class="rounded-2xl p-6" style="background:#1c1c1e;">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-5">
         <div>
           <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-1.5">Total Active Balance</div>
           <div class="text-4xl font-bold tracking-tight text-white mb-1.5 tabular-nums">\${fmt(grand)}</div>
@@ -260,14 +259,21 @@ function renderStatsCard(summaries) {
         </div>
         <div class="flex gap-5">
           <div class="border-l border-gray-700 pl-4">
-            <div class="text-[10px] uppercase tracking-wider text-gray-400 mb-0.5">Pending</div>
+            <div class="flex items-center gap-1.5 mb-0.5"><span class="w-2 h-2 rounded-full bg-rose-400"></span><span class="text-[10px] uppercase tracking-wider text-gray-400">Pending</span></div>
             <div class="text-lg font-semibold text-white tabular-nums">\${fmt(pendingTotal)}</div>
           </div>
           <div class="border-l border-gray-700 pl-4">
-            <div class="text-[10px] uppercase tracking-wider text-gray-400 mb-0.5">Settled</div>
+            <div class="flex items-center gap-1.5 mb-0.5"><span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="text-[10px] uppercase tracking-wider text-gray-400">Settled</span></div>
             <div class="text-lg font-semibold text-white tabular-nums">\${fmt(settledTotal)}</div>
           </div>
         </div>
+      </div>
+      <!-- honest pending/settled proportion bar -->
+      <div class="h-2 rounded-full overflow-hidden flex bg-gray-700">
+        \${grand > 0 ? \`
+          <div class="bg-rose-400 h-full" style="width:\${pendingPct}%"></div>
+          <div class="bg-sky-400 h-full" style="width:\${100 - pendingPct}%"></div>
+        \` : ''}
       </div>
     </div>\`;
 }
@@ -276,13 +282,13 @@ function renderGlobalStats(stats) {
   const el = document.getElementById('globalStats');
   if (!el) return;
   el.innerHTML = \`
-    <div>
-      <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-1">Total Bills Settled</div>
-      <div class="text-3xl font-bold tracking-tight text-gray-900 tabular-nums">\${fmtNum(stats.billsSettled || 0)}</div>
+    <div class="flex items-center gap-2">
+      <span class="text-2xl font-bold tracking-tight text-gray-900 tabular-nums">\${fmtNum(stats.billsSettled || 0)}</span>
+      <span class="text-xs text-gray-400 leading-tight">bills<br>settled</span>
     </div>
-    <div class="text-right">
-      <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-1">Total Money Split</div>
-      <div class="text-3xl font-bold tracking-tight text-gray-900 tabular-nums">\${fmtCompact(stats.moneySplit || 0)}</div>
+    <div class="flex items-center gap-2 text-right">
+      <span class="text-xs text-gray-400 leading-tight">total<br>money split</span>
+      <span class="text-2xl font-bold tracking-tight text-gray-900 tabular-nums">\${fmtCompact(stats.moneySplit || 0)}</span>
     </div>\`;
 }
 
@@ -330,7 +336,7 @@ function buildPayerChips() {
   return currentParty.people.map((pr, i) => {
     const on = pr.id === payer;
     const c = COLORS[i % COLORS.length];
-    return \`<button onclick="selectPayer('\${pr.id}')" class="text-sm font-medium px-3 py-1 rounded-full transition-all \${on ? c.active + ' ring-2 ring-offset-1 ring-gray-300' : c.base}">\${escHtml(pr.name)}</button>\`;
+    return \`<button onclick="selectPayer('\${pr.id}')" class="text-sm font-medium px-3 py-1.5 rounded-full transition-all \${on ? c.active : c.base + ' opacity-60 hover:opacity-100'}">\${escHtml(pr.name)}</button>\`;
   }).join('');
 }
 function buildSplitChips() {
@@ -338,7 +344,7 @@ function buildSplitChips() {
   return currentParty.people.map((pr, i) => {
     const on = split.includes(pr.id);
     const c = COLORS[i % COLORS.length];
-    return \`<button onclick="toggleSplitChip('\${pr.id}')" class="text-sm px-3 py-1 rounded-full transition-all \${on ? c.base : 'bg-gray-100 text-gray-300 line-through'}">\${escHtml(pr.name)}</button>\`;
+    return \`<button onclick="toggleSplitChip('\${pr.id}')" class="text-sm font-medium px-3 py-1.5 rounded-full transition-all \${on ? c.base : 'bg-gray-100 text-gray-400'}">\${escHtml(pr.name)}</button>\`;
   }).join('');
 }
 
@@ -348,62 +354,75 @@ function renderParty() {
   const has2 = p.people.length >= 2;
   const total = p.expenses.reduce((s, e) => s + e.amount, 0);
 
+  const hasExp = p.expenses.length > 0;
+
   document.getElementById('app').innerHTML = \`
     <div class="fade-in space-y-3">
 
       <!-- Header -->
-      <div class="flex items-center justify-between gap-3 mb-1">
+      <div class="flex items-end justify-between gap-3 mb-1">
         <div class="min-w-0">
           <h2 class="text-2xl font-bold tracking-tight truncate">\${escHtml(p.name)}</h2>
-          <p class="text-sm text-gray-400">\${p.people.length} people · \${p.expenses.length} expenses · \${fmt(total)}</p>
+          <p class="text-sm text-gray-400">\${p.people.length} \${p.people.length === 1 ? 'person' : 'people'} · \${p.expenses.length} \${p.expenses.length === 1 ? 'expense' : 'expenses'} · \${fmt(total)}</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <button onclick="showInviteModal()" title="Invite" class="bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900 p-2.5 rounded-xl transition-colors shadow-sm">
+          <button onclick="showInviteModal()" class="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 hover:border-gray-400 hover:text-gray-900 text-sm font-medium px-3 py-2 rounded-xl transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            Share
           </button>
-          <button onclick="confirmSeal()" title="Seal" class="bg-black hover:bg-gray-800 text-white p-2.5 rounded-xl transition-colors shadow-sm">
+          <button onclick="confirmSeal()" class="flex items-center gap-1.5 bg-black hover:bg-gray-800 text-white text-sm font-medium px-3 py-2 rounded-xl transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            Seal
           </button>
+        </div>
+      </div>
+
+      <!-- Settlement (result first) -->
+      <div class="card overflow-hidden">
+        <button onclick="toggleSettlement()" class="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+          <span class="flex items-center gap-2 text-base font-semibold text-gray-900">
+            <span id="settlementArrow" class="text-gray-400 text-xs">\${settlementOpen?'▼':'▶'}</span>
+            Who owes whom
+          </span>
+          <span id="settlementSummary" class="text-xs text-gray-400">\${hasExp ? 'calculating…' : ''}</span>
+        </button>
+        <div id="settlementDetails" class="\${settlementOpen?'':'hidden'} border-t border-gray-100 px-4 py-3">
+          <div id="settlementBody" class="text-sm text-gray-500">\${has2 && hasExp ? 'calculating…' : 'Add at least 2 people and an expense to see who owes whom.'}</div>
         </div>
       </div>
 
       <!-- People -->
       <div class="card px-3.5 py-3 flex items-center gap-2 flex-wrap">
         \${p.people.map((pr, i) => \`
-          <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-            <span class="w-1.5 h-1.5 rounded-full \${COLORS[i%COLORS.length].active.split(' ')[0]} inline-block"></span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full \${COLORS[i%COLORS.length].base}">
             \${escHtml(pr.name)}
-            <button onclick="removePerson('\${pr.id}')" class="opacity-30 hover:opacity-80 transition-opacity leading-none ml-0.5">✕</button>
+            <button onclick="removePerson('\${pr.id}')" class="opacity-40 hover:opacity-100 transition-opacity leading-none ml-0.5">✕</button>
           </span>
         \`).join('')}
         <div class="flex items-center gap-1.5 ml-auto">
           <input id="personInput" type="text" placeholder="Add person…" maxlength="50"
-            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 w-24 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:w-32 transition-all"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 w-28 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:w-36 transition-all"
             onkeydown="if(event.key==='Enter') addPerson()">
-          <button onclick="addPerson()" class="bg-black hover:bg-gray-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">Add</button>
+          <button onclick="addPerson()" class="bg-black hover:bg-gray-800 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">Add</button>
         </div>
       </div>
 
       <!-- Expenses -->
-      \${p.expenses.length > 0 ? \`<div class="space-y-2">\${[...p.expenses].reverse().map(e => {
-        const payerClr = clr(p.people, e.paidBy);
+      \${hasExp ? \`<div class="space-y-2">\${[...p.expenses].reverse().map(e => {
         const payerName = p.people.find(pr => pr.id === e.paidBy)?.name || '?';
         const splitIds = e.splitBetween.length > 0 ? e.splitBetween : p.people.map(pr => pr.id);
         return \`<div class="card px-4 py-3">
           <div class="flex items-center gap-2 min-w-0">
             <span class="flex-1 font-medium text-gray-900 text-sm truncate">\${escHtml(e.description)}</span>
-            <span class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0 \${payerClr.base}">\${escHtml(payerName)}</span>
+            \${personChip(p.people, e.paidBy, payerName, 'on')}
             <span class="text-sm font-semibold text-gray-900 w-16 text-right shrink-0 tabular-nums">\${fmt(e.amount)}</span>
             <button onclick="removeExpense('\${e.id}')" class="text-gray-300 hover:text-red-400 transition-colors shrink-0">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
-          <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <span class="text-[10px] text-gray-400 uppercase tracking-wide">split</span>
-            \${p.people.map((pr, i) => {
-              const on = splitIds.includes(pr.id);
-              return \`<span class="text-[11px] px-2 py-0.5 rounded-full \${on ? COLORS[i%COLORS.length].base : 'bg-gray-100 text-gray-300 line-through'}">\${escHtml(pr.name)}</span>\`;
-            }).join('')}
+          <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span class="text-xs text-gray-400 mr-0.5">Split</span>
+            \${p.people.map(pr => personChip(p.people, pr.id, pr.name, splitIds.includes(pr.id) ? 'on' : 'off')).join('')}
           </div>
         </div>\`;
       }).join('')}</div>\` : ''}
@@ -413,25 +432,26 @@ function renderParty() {
 
       <!-- Add expense -->
       \${has2 ? \`
-        <div class="card border-2 border-dashed border-gray-200 p-4 space-y-3" style="box-shadow:none;">
+        <div class="card p-4 space-y-4">
+          <div class="text-sm font-semibold text-gray-900">Add an expense</div>
           <div class="flex gap-2">
             <input id="expDesc" type="text" placeholder="What for?" maxlength="100"
-              class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-300"
+              class="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400"
               onkeydown="if(event.key==='Enter') document.getElementById('expAmount').focus()">
             <div class="relative w-28">
-              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300 text-sm pointer-events-none">$</span>
+              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
               <input id="expAmount" type="number" placeholder="0.00" min="0.01" step="0.01"
-                class="w-full border border-gray-200 rounded-lg pl-6 pr-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                class="w-full border border-gray-200 rounded-lg pl-6 pr-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 onkeydown="if(event.key==='Enter') addExpense()">
             </div>
           </div>
           <div>
-            <div class="text-[10px] uppercase tracking-wide text-gray-400 mb-1.5">Paid by</div>
+            <div class="text-xs font-medium text-gray-500 mb-2">Paid by</div>
             <div id="payerChips" class="flex flex-wrap gap-1.5">\${buildPayerChips()}</div>
           </div>
           <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[10px] uppercase tracking-wide text-gray-400">Split between</span>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-gray-500">Split between</span>
               <button onclick="toggleAllSplit()" class="text-xs font-medium text-blue-600 hover:text-blue-700">Toggle all</button>
             </div>
             <div id="splitChips" class="flex flex-wrap gap-1.5">\${buildSplitChips()}</div>
@@ -440,28 +460,12 @@ function renderParty() {
             Add expense
           </button>
         </div>
-      \` : \`<div class="card p-4 text-sm text-gray-500" style="background:#eff6ff;box-shadow:none;">Add at least 2 people to start recording expenses.</div>\`}
-
-      <!-- Settlement -->
-      \${has2 && p.expenses.length > 0 ? \`
-        <div class="card overflow-hidden">
-          <button onclick="toggleSettlement()" class="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
-            <span class="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <span id="settlementArrow" class="text-gray-400 text-xs">\${settlementOpen?'▼':'▶'}</span>
-              Settlement
-            </span>
-            <span id="settlementSummary" class="text-xs text-gray-400 italic">calculating…</span>
-          </button>
-          <div id="settlementDetails" class="\${settlementOpen?'':'hidden'} border-t border-gray-100 px-4 py-3">
-            <div id="settlementBody" class="text-sm text-gray-500">calculating…</div>
-          </div>
-        </div>
-      \` : ''}
+      \` : \`<div class="card p-4 text-sm text-gray-600">Add at least 2 people to start recording expenses.</div>\`}
 
     </div>
   \`;
 
-  if (has2 && p.expenses.length > 0) loadSettlements();
+  if (has2 && hasExp) loadSettlements();
 }
 
 // ── Receipts ───────────────────────────────────────────────────────────────────
@@ -471,18 +475,6 @@ function renderReceiptsSection(p, editable) {
   const canUpload = editable && receipts.length < 100;
   const quota = aiQuota;
   const canExtract = !quota || quota.canExtract;
-
-  function quotaMeter() {
-    if (!editable || !quota) return '';
-    const pct = Math.min(100, Math.round((quota.used / quota.limit) * 100));
-    const barColor = pct >= 90 ? 'bg-red-400' : pct >= 70 ? 'bg-amber-400' : 'bg-gray-900';
-    const label = !canExtract
-      ? \`<span class="text-[10px] text-red-400 font-medium">Limit reached</span>\`
-      : \`<span class="text-[10px] text-gray-400">\${quota.used.toLocaleString()} / \${quota.limit.toLocaleString()} neurons</span>\`;
-    return \`<div class="flex items-center gap-2">\${label}
-      <div class="w-16 h-1 bg-gray-100 rounded-full overflow-hidden"><div class="\${barColor} h-full rounded-full transition-all" style="width:\${pct}%"></div></div>
-    </div>\`;
-  }
 
   const rows = receipts.map(r => {
     const hasAmt = r.status === 'done' && r.extractedAmount != null;
@@ -502,11 +494,11 @@ function renderReceiptsSection(p, editable) {
           \${r.status === 'error'      ? '<span class="text-[10px] text-red-400">failed</span>' : ''}
           \${hasAmt ? \`
             <span class="text-sm font-semibold text-gray-900 tabular-nums">\${fmt(r.extractedAmount)}</span>
-            \${editable ? \`<button onclick="useReceiptAmount(\${r.extractedAmount})" class="text-[10px] font-semibold bg-black text-white hover:bg-gray-800 px-2 py-1 rounded-lg transition-colors">Use</button>\` : ''}
+            \${editable ? \`<button onclick="useReceiptAmount(\${r.extractedAmount})" class="text-xs font-semibold bg-black text-white hover:bg-gray-800 px-2.5 py-1 rounded-lg transition-colors">Add as expense</button>\` : ''}
           \` : ''}
           \${canExtractThis ? (canExtract
-            ? \`<button onclick="extractReceipt('\${r.id}')" class="text-[10px] font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-400 px-2 py-1 rounded-lg transition-colors">Extract →</button>\`
-            : \`<span class="text-[10px] text-gray-300" title="Daily AI quota reached">Extract →</span>\`
+            ? \`<button onclick="extractReceipt('\${r.id}')" class="text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-400 px-2.5 py-1 rounded-lg transition-colors">Scan total</button>\`
+            : \`<span class="text-xs text-gray-400" title="Daily scan limit reached — resets at midnight UTC">Limit reached</span>\`
           ) : ''}
           \${editable ? \`
             <button onclick="deleteReceipt('\${r.id}')" class="text-gray-300 hover:text-red-400 transition-colors">
@@ -523,10 +515,9 @@ function renderReceiptsSection(p, editable) {
         <span class="text-sm font-semibold text-gray-900 flex items-center gap-2">
           <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.414 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
           Receipts
-          \${receipts.length > 0 ? \`<span class="text-[10px] font-normal text-gray-400">\${receipts.length}/100</span>\` : ''}
+          \${receipts.length > 0 ? \`<span class="text-xs font-normal text-gray-400">\${receipts.length}/100</span>\` : ''}
         </span>
         <div class="flex items-center gap-3">
-          \${quotaMeter()}
           \${canUpload ? \`
             <label class="cursor-pointer text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
               Attach
@@ -566,7 +557,7 @@ function renderSealedParty(p) {
         Sealed\${p.sealedAt?' · '+new Date(p.sealedAt).toLocaleString():''} — locked, no further changes.
       </div>
       <div class="card px-3.5 py-3 flex flex-wrap gap-2">
-        \${p.people.map((pr, i) => \`<span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600"><span class="w-1.5 h-1.5 rounded-full \${COLORS[i%COLORS.length].active.split(' ')[0]} inline-block mr-1"></span>\${escHtml(pr.name)}</span>\`).join('')}
+        \${p.people.map(pr => personChip(p.people, pr.id, pr.name, 'on')).join('')}
       </div>
       \${p.expenses.length > 0 ? \`<div class="space-y-2">\${[...p.expenses].reverse().map(e => {
         const splitIds = e.splitBetween.length > 0 ? e.splitBetween : p.people.map(pr => pr.id);
@@ -576,9 +567,9 @@ function renderSealedParty(p) {
             <span class="text-xs font-medium px-2 py-0.5 rounded-full \${clr(p.people,e.paidBy).base} shrink-0">\${escHtml(peopleMap[e.paidBy]||'?')}</span>
             <span class="text-sm font-semibold text-gray-900 w-16 text-right tabular-nums">\${fmt(e.amount)}</span>
           </div>
-          <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <span class="text-[10px] text-gray-400 uppercase tracking-wide">split</span>
-            \${p.people.map((pr,i) => { const on=splitIds.includes(pr.id); return \`<span class="text-[11px] px-2 py-0.5 rounded-full \${on?COLORS[i%COLORS.length].base:'bg-gray-100 text-gray-300 line-through'}">\${escHtml(pr.name)}</span>\`; }).join('')}
+          <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span class="text-xs text-gray-400 mr-0.5">Split</span>
+            \${p.people.map(pr => personChip(p.people, pr.id, pr.name, splitIds.includes(pr.id) ? 'on' : 'off')).join('')}
           </div>
         </div>\`;
       }).join('')}</div>\` : ''}
@@ -716,7 +707,7 @@ function useReceiptAmount(amount) {
   if (!el) return;
   el.value = amount.toFixed(2);
   document.getElementById('expDesc')?.focus();
-  el.closest('.border-dashed')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ── Settlement ─────────────────────────────────────────────────────────────────
@@ -832,7 +823,7 @@ function renderSnapshot(snap) {
         Immutable snapshot · \${new Date(snap.createdAt).toLocaleString()}
       </div>
       <div class="card px-3.5 py-3 flex flex-wrap gap-2">
-        \${p.people.map((pr,i) => \`<span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600"><span class="w-1.5 h-1.5 rounded-full \${COLORS[i%COLORS.length].active.split(' ')[0]} inline-block mr-1"></span>\${escHtml(pr.name)}</span>\`).join('')}
+        \${p.people.map(pr => personChip(p.people, pr.id, pr.name, 'on')).join('')}
       </div>
       \${p.expenses.length > 0 ? \`<div class="space-y-2">\${[...p.expenses].reverse().map(e => {
         const splitIds = e.splitBetween.length > 0 ? e.splitBetween : p.people.map(pr => pr.id);
@@ -842,9 +833,9 @@ function renderSnapshot(snap) {
             <span class="text-xs font-medium px-2 py-0.5 rounded-full \${clr(p.people,e.paidBy).base} shrink-0">\${escHtml(pm[e.paidBy]||'?')}</span>
             <span class="text-sm font-semibold text-gray-900 w-16 text-right tabular-nums">\${fmt(e.amount)}</span>
           </div>
-          <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <span class="text-[10px] text-gray-400 uppercase tracking-wide">split</span>
-            \${p.people.map((pr,i) => { const on=splitIds.includes(pr.id); return \`<span class="text-[11px] px-2 py-0.5 rounded-full \${on?COLORS[i%COLORS.length].base:'bg-gray-100 text-gray-300 line-through'}">\${escHtml(pr.name)}</span>\`; }).join('')}
+          <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span class="text-xs text-gray-400 mr-0.5">Split</span>
+            \${p.people.map(pr => personChip(p.people, pr.id, pr.name, splitIds.includes(pr.id) ? 'on' : 'off')).join('')}
           </div>
         </div>\`;
       }).join('')}</div>\` : ''}
