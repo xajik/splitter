@@ -1,11 +1,65 @@
+import { TAILWIND_CSS } from './styles';
+
 export function getAppHTML(): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Splitter — Split bills with friends</title>
-<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Primary SEO -->
+<title>Splitter — Free Online Bill Splitter & Group Expense Calculator</title>
+<meta name="description" content="Split bills and shared expenses with friends, roommates, and travel groups. Add people, log expenses, and instantly see who owes whom. 100% free, no sign-up, share with a link.">
+<meta name="keywords" content="bill splitter, split expenses, split the bill, group expenses, expense calculator, who owes whom, shared expenses, trip cost splitter, roommate expenses, settle up, splitwise alternative">
+<meta name="author" content="Splitter">
+<meta name="application-name" content="Splitter">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="theme-color" content="#1c1c1e">
+<link rel="canonical" href="https://splitter.xajik0.workers.dev/">
+
+<!-- Icons & PWA -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Splitter">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Splitter">
+<meta property="og:title" content="Splitter — Free Online Bill Splitter for Groups">
+<meta property="og:description" content="Split bills and shared expenses with friends. See who owes whom instantly. Free, no sign-up, share with a link.">
+<meta property="og:url" content="https://splitter.xajik0.workers.dev/">
+<meta property="og:image" content="https://splitter.xajik0.workers.dev/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Splitter — split bills with friends, see who owes whom instantly">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Splitter — Free Online Bill Splitter for Groups">
+<meta name="twitter:description" content="Split bills and shared expenses with friends. See who owes whom instantly. Free, no sign-up.">
+<meta name="twitter:image" content="https://splitter.xajik0.workers.dev/og.png">
+<meta name="twitter:image:alt" content="Splitter — split bills with friends, see who owes whom instantly">
+
+<!-- Structured data -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Splitter","url":"https://splitter.xajik0.workers.dev/","description":"Free online bill splitter and group expense calculator. Split shared expenses with friends, roommates, and travel groups and instantly see who owes whom.","applicationCategory":"FinanceApplication","operatingSystem":"Any (web browser)","browserRequirements":"Requires JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Split bills evenly or unevenly","See who owes whom with minimal transactions","Attach receipts and extract totals automatically","Share a group with a link","Seal a group to make it read-only"]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I split a bill with friends?","acceptedAnswer":{"@type":"Answer","text":"Create a group, add everyone's name, then log each shared expense and who paid. Splitter calculates the simplest set of payments to settle up."}},{"@type":"Question","name":"Is Splitter free to use?","acceptedAnswer":{"@type":"Answer","text":"Yes. Splitter is completely free, with no sign-up or app install required."}},{"@type":"Question","name":"How does Splitter decide who owes whom?","acceptedAnswer":{"@type":"Answer","text":"It tallies what each person paid versus their share, then minimises the number of payments needed so everyone settles up with as few transfers as possible."}},{"@type":"Question","name":"Can I split an expense between only some people?","acceptedAnswer":{"@type":"Answer","text":"Yes. For each expense you choose exactly who it is split between, so costs only apply to the people involved."}}]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"Splitter","alternateName":"Splitter Bill Splitter","url":"https://splitter.xajik0.workers.dev/"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"Splitter","url":"https://splitter.xajik0.workers.dev/","logo":"https://splitter.xajik0.workers.dev/og.png"}
+</script>
+
+<style>${TAILWIND_CSS}</style>
 <style>
 body { background: #f4f4f5; }
 .fade-in { animation: fadeIn .2s ease; }
@@ -15,13 +69,26 @@ body { background: #f4f4f5; }
 .pulse-text { animation: pulseTxt 1.5s ease-in-out infinite; }
 @keyframes pulseTxt { 0%,100% { opacity:.5; } 50% { opacity:1; } }
 .card { background:#fff; border-radius:1rem; box-shadow:0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.03); }
+.slide-up { animation: slideUp .25s cubic-bezier(.32,.72,0,1); }
+@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.sticky-bar { padding-bottom: calc(.75rem + env(safe-area-inset-bottom)); }
+.sheet-pad { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+/* iOS zooms the page when focusing inputs under 16px — force 16px on phones */
+@media (max-width:640px) { input, textarea, select { font-size:16px !important; } }
 </style>
 </head>
 <body class="min-h-screen font-sans text-gray-900 antialiased">
 
+<noscript>
+  <div style="max-width:42rem;margin:0 auto;padding:2rem 1.25rem;line-height:1.6;color:#3f3f46">
+    <h2 style="font-size:1.25rem;font-weight:700;color:#18181b">Split bills and expenses with friends — free</h2>
+    <p>Splitter is a free online bill splitter and group expense calculator. Create a group, add the people, log each shared expense, and Splitter works out the simplest way to settle up — who owes whom and how much. No sign-up and no app to install. JavaScript is required to use the app.</p>
+  </div>
+</noscript>
+
 <header class="max-w-2xl mx-auto px-5 pt-5 pb-2">
   <button onclick="goHome()" class="flex items-center gap-2 font-bold text-lg tracking-tight text-gray-900 hover:opacity-70 transition-opacity">
-    <span class="w-6 h-6 bg-black rounded-lg flex items-center justify-center">
+    <span class="w-6 h-6 bg-[#1c1c1e] rounded-lg flex items-center justify-center">
       <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 8h10M7 12h6m-6 4h10"/></svg>
     </span>
     Splitter
@@ -29,6 +96,40 @@ body { background: #f4f4f5; }
 </header>
 
 <main class="max-w-2xl mx-auto px-5 py-4 pb-10" id="app"></main>
+<div id="stickyBar"></div>
+
+<section id="seoFooter" class="max-w-2xl mx-auto px-5 pt-10 pb-16" style="display:none">
+  <div class="border-t border-gray-200 pt-8">
+
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900 mb-2">Split bills with friends — free</h1>
+    <p class="text-sm leading-relaxed text-gray-500 mb-8">Splitter is a free online bill splitter and group expense calculator. Create a group, add the people, log each shared expense, and Splitter instantly works out the simplest way to settle up — who owes whom and exactly how much. No sign-up, no app to install. Share a link with your friends, roommates, or travel group, attach receipts, and seal the final result so it can't change.</p>
+
+    <h2 class="text-base font-semibold text-gray-900 mb-4">How Splitter works</h2>
+    <ol class="space-y-4 mb-8">
+      <li class="flex gap-3"><span class="w-7 h-7 shrink-0 rounded-full bg-[#1c1c1e] text-white text-sm font-semibold flex items-center justify-center">1</span><div class="text-sm text-gray-600"><span class="font-medium text-gray-900">Create a group.</span> Name your trip, dinner, or household and add everyone splitting the costs.</div></li>
+      <li class="flex gap-3"><span class="w-7 h-7 shrink-0 rounded-full bg-[#1c1c1e] text-white text-sm font-semibold flex items-center justify-center">2</span><div class="text-sm text-gray-600"><span class="font-medium text-gray-900">Add expenses.</span> Record who paid and who shares each cost — split evenly or between just some people.</div></li>
+      <li class="flex gap-3"><span class="w-7 h-7 shrink-0 rounded-full bg-[#1c1c1e] text-white text-sm font-semibold flex items-center justify-center">3</span><div class="text-sm text-gray-600"><span class="font-medium text-gray-900">Settle up.</span> See exactly who owes whom with the fewest possible payments, then share or seal the result.</div></li>
+    </ol>
+
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Features</h2>
+    <ul class="grid sm:grid-cols-2 gap-x-6 gap-y-2 mb-8 text-sm text-gray-600 list-disc pl-5">
+      <li>Split bills evenly or unevenly</li>
+      <li>Instant “who owes whom” with minimal transfers</li>
+      <li>Attach receipts and auto-extract totals</li>
+      <li>Share a group with a single link</li>
+      <li>Seal a group to make it read-only</li>
+      <li>Free forever — no sign-up, works on any device</li>
+    </ul>
+
+    <h2 class="text-base font-semibold text-gray-900 mb-3">Frequently asked questions</h2>
+    <dl class="space-y-3 text-sm leading-relaxed text-gray-500">
+      <div><dt class="font-medium text-gray-700">How do I split a bill with friends?</dt><dd>Create a group, add everyone's name, then log each shared expense and who paid. Splitter calculates the simplest set of payments to settle up.</dd></div>
+      <div><dt class="font-medium text-gray-700">Is Splitter free to use?</dt><dd>Yes. Splitter is completely free, with no sign-up or app install required.</dd></div>
+      <div><dt class="font-medium text-gray-700">How does Splitter decide who owes whom?</dt><dd>It tallies what each person paid versus their share, then minimises the number of payments so everyone settles up with as few transfers as possible.</dd></div>
+      <div><dt class="font-medium text-gray-700">Can I split an expense between only some people?</dt><dd>Yes. For each expense you choose exactly who it is split between, so costs only apply to the people involved.</dd></div>
+    </dl>
+  </div>
+</section>
 
 <script>
 const API = '';
@@ -40,28 +141,29 @@ let settlementOpen = true;
 let _confirmCb     = null;
 let aiQuota        = null;
 
-// Person chip colors — functional distinction, muted to fit the monochrome shell
+// Person chip colors — soft pastel fills + muted text so they sit gently against
+// the black/white shell. 'sel' = ring used to mark the selected payer (no loud solid).
 const COLORS = [
-  { base: 'bg-sky-100 text-sky-700',       active: 'bg-sky-500 text-white'     },
-  { base: 'bg-violet-100 text-violet-700', active: 'bg-violet-500 text-white'  },
-  { base: 'bg-amber-100 text-amber-700',   active: 'bg-amber-600 text-white'   },
-  { base: 'bg-rose-100 text-rose-700',     active: 'bg-rose-500 text-white'    },
-  { base: 'bg-cyan-100 text-cyan-700',     active: 'bg-cyan-500 text-white'    },
-  { base: 'bg-orange-100 text-orange-700', active: 'bg-orange-500 text-white'  },
-  { base: 'bg-pink-100 text-pink-700',     active: 'bg-pink-500 text-white'    },
-  { base: 'bg-teal-100 text-teal-700',     active: 'bg-teal-500 text-white'    },
+  { base: 'bg-sky-50 text-sky-700',       sel: 'ring-sky-300'    },
+  { base: 'bg-violet-50 text-violet-700', sel: 'ring-violet-300' },
+  { base: 'bg-amber-50 text-amber-700',   sel: 'ring-amber-300'  },
+  { base: 'bg-rose-50 text-rose-700',     sel: 'ring-rose-300'   },
+  { base: 'bg-cyan-50 text-cyan-700',     sel: 'ring-cyan-300'   },
+  { base: 'bg-orange-50 text-orange-700', sel: 'ring-orange-300' },
+  { base: 'bg-pink-50 text-pink-700',     sel: 'ring-pink-300'   },
+  { base: 'bg-teal-50 text-teal-700',     sel: 'ring-teal-300'   },
 ];
 
 function clr(people, pid) {
   const i = people.findIndex(p => p.id === pid);
-  return i >= 0 ? COLORS[i % COLORS.length] : { base: 'bg-gray-100 text-gray-500', active: 'bg-gray-400 text-white' };
+  return i >= 0 ? COLORS[i % COLORS.length] : { base: 'bg-gray-100 text-gray-500', sel: 'ring-gray-300' };
 }
 
 // Unified person chip — one visual language everywhere.
-// state: 'on' (colored), 'active' (payer-selected, solid), 'off' (muted, deselected)
+// state: 'on' (soft color), 'active' (payer-selected: soft color + ring), 'off' (muted)
 function personChip(people, pid, name, state) {
   const c = clr(people, pid);
-  const cls = state === 'active' ? c.active
+  const cls = state === 'active' ? c.base + ' ring-2 ring-inset font-semibold ' + c.sel
     : state === 'off' ? 'bg-gray-100 text-gray-400'
     : c.base;
   return '<span class="text-xs font-medium px-2.5 py-1 rounded-full ' + cls + '">' + escHtml(name) + '</span>';
@@ -134,6 +236,7 @@ function addToHistory(e) {
 
 function renderHome() {
   currentPartyId = null; currentParty = null;
+  setStickyBar(''); closeExpenseSheet(); toggleFooter(true);
   document.getElementById('app').innerHTML = \`
     <div class="fade-in space-y-8">
 
@@ -143,7 +246,7 @@ function renderHome() {
           class="flex-1 px-3 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent"
           onkeydown="if(event.key==='Enter') createParty()">
         <button onclick="createParty()" id="createBtn"
-          class="flex items-center gap-1.5 bg-black hover:bg-gray-800 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors shrink-0">
+          class="flex items-center gap-1.5 bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
           Create
         </button>
@@ -216,8 +319,8 @@ function renderRecentList(summaries) {
     const settled = s.settled;
     const iconWrap = settled
       ? 'bg-gray-100 text-gray-500'
-      : 'bg-black text-white';
-    const statusCls = settled ? 'text-blue-600' : 'text-red-500';
+      : 'bg-[#1c1c1e] text-white';
+    const statusCls = settled ? 'text-blue-600' : 'text-rose-500';
     const statusTxt = settled ? 'Settled' : 'Pending';
     const href = "location.hash='/" + (s.type === 'share' ? 'share' : 'party') + "/" + s.id + "'";
     return \`
@@ -317,7 +420,7 @@ async function loadParty(id) {
   aiQuota = quota.error ? null : quota;
   formPayer = null; formSplitSet = null;
   addToHistory({ id: res.id, name: res.name, date: Date.now(), type: 'party' });
-  renderParty();
+  renderParty(true);
 }
 
 function effectivePayer() {
@@ -336,7 +439,7 @@ function buildPayerChips() {
   return currentParty.people.map((pr, i) => {
     const on = pr.id === payer;
     const c = COLORS[i % COLORS.length];
-    return \`<button onclick="selectPayer('\${pr.id}')" class="text-sm font-medium px-3 py-1.5 rounded-full transition-all \${on ? c.active : c.base + ' opacity-60 hover:opacity-100'}">\${escHtml(pr.name)}</button>\`;
+    return \`<button onclick="selectPayer('\${pr.id}')" class="text-sm font-medium px-3.5 py-2 rounded-full transition-all \${on ? c.base + ' ring-2 ring-inset font-semibold ' + c.sel : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}">\${escHtml(pr.name)}</button>\`;
   }).join('');
 }
 function buildSplitChips() {
@@ -344,11 +447,11 @@ function buildSplitChips() {
   return currentParty.people.map((pr, i) => {
     const on = split.includes(pr.id);
     const c = COLORS[i % COLORS.length];
-    return \`<button onclick="toggleSplitChip('\${pr.id}')" class="text-sm font-medium px-3 py-1.5 rounded-full transition-all \${on ? c.base : 'bg-gray-100 text-gray-400'}">\${escHtml(pr.name)}</button>\`;
+    return \`<button onclick="toggleSplitChip('\${pr.id}')" class="text-sm font-medium px-3.5 py-2 rounded-full transition-all \${on ? c.base : 'bg-gray-100 text-gray-400'}">\${escHtml(pr.name)}</button>\`;
   }).join('');
 }
 
-function renderParty() {
+function renderParty(animate) {
   const p = currentParty;
   if (p.sealed) { renderSealedParty(p); return; }
   const has2 = p.people.length >= 2;
@@ -357,7 +460,7 @@ function renderParty() {
   const hasExp = p.expenses.length > 0;
 
   document.getElementById('app').innerHTML = \`
-    <div class="fade-in space-y-3">
+    <div class="\${animate ? 'fade-in ' : ''}space-y-3">
 
       <!-- Header -->
       <div class="flex items-end justify-between gap-3 mb-1">
@@ -370,7 +473,7 @@ function renderParty() {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
             Share
           </button>
-          <button onclick="confirmSeal()" class="flex items-center gap-1.5 bg-black hover:bg-gray-800 text-white text-sm font-medium px-3 py-2 rounded-xl transition-colors shadow-sm">
+          <button onclick="confirmSeal()" class="flex items-center gap-1.5 bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white text-sm font-medium px-3 py-2 rounded-xl transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             Seal
           </button>
@@ -396,14 +499,14 @@ function renderParty() {
         \${p.people.map((pr, i) => \`
           <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full \${COLORS[i%COLORS.length].base}">
             \${escHtml(pr.name)}
-            <button onclick="removePerson('\${pr.id}')" class="opacity-40 hover:opacity-100 transition-opacity leading-none ml-0.5">✕</button>
+            <button onclick="removePerson('\${pr.id}')" class="opacity-40 hover:opacity-100 transition-opacity leading-none ml-0.5 p-1 -mr-1">✕</button>
           </span>
         \`).join('')}
         <div class="flex items-center gap-1.5 ml-auto">
           <input id="personInput" type="text" placeholder="Add person…" maxlength="50"
             class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 w-28 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:w-36 transition-all"
             onkeydown="if(event.key==='Enter') addPerson()">
-          <button onclick="addPerson()" class="bg-black hover:bg-gray-800 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">Add</button>
+          <button onclick="addPerson()" class="bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">Add</button>
         </div>
       </div>
 
@@ -416,8 +519,8 @@ function renderParty() {
             <span class="flex-1 font-medium text-gray-900 text-sm truncate">\${escHtml(e.description)}</span>
             \${personChip(p.people, e.paidBy, payerName, 'on')}
             <span class="text-sm font-semibold text-gray-900 w-16 text-right shrink-0 tabular-nums">\${fmt(e.amount)}</span>
-            <button onclick="removeExpense('\${e.id}')" class="text-gray-300 hover:text-red-400 transition-colors shrink-0">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button onclick="removeExpense('\${e.id}')" class="w-8 h-8 -mr-1.5 flex items-center justify-center text-gray-300 hover:text-red-400 transition-colors shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
           <div class="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -430,42 +533,112 @@ function renderParty() {
       <!-- Receipts -->
       \${renderReceiptsSection(p, true)}
 
-      <!-- Add expense -->
-      \${has2 ? \`
-        <div class="card p-4 space-y-4">
-          <div class="text-sm font-semibold text-gray-900">Add an expense</div>
-          <div class="flex gap-2">
-            <input id="expDesc" type="text" placeholder="What for?" maxlength="100"
-              class="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400"
-              onkeydown="if(event.key==='Enter') document.getElementById('expAmount').focus()">
-            <div class="relative w-28">
-              <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">$</span>
-              <input id="expAmount" type="number" placeholder="0.00" min="0.01" step="0.01"
-                class="w-full border border-gray-200 rounded-lg pl-6 pr-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                onkeydown="if(event.key==='Enter') addExpense()">
-            </div>
-          </div>
-          <div>
-            <div class="text-xs font-medium text-gray-500 mb-2">Paid by</div>
-            <div id="payerChips" class="flex flex-wrap gap-1.5">\${buildPayerChips()}</div>
-          </div>
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-medium text-gray-500">Split between</span>
-              <button onclick="toggleAllSplit()" class="text-xs font-medium text-blue-600 hover:text-blue-700">Toggle all</button>
-            </div>
-            <div id="splitChips" class="flex flex-wrap gap-1.5">\${buildSplitChips()}</div>
-          </div>
-          <button onclick="addExpense()" class="w-full bg-black hover:bg-gray-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">
-            Add expense
-          </button>
-        </div>
-      \` : \`<div class="card p-4 text-sm text-gray-600">Add at least 2 people to start recording expenses.</div>\`}
+      \${has2 ? '' : \`<div class="card p-4 text-sm text-gray-600">Add at least 2 people to start recording expenses.</div>\`}
 
     </div>
   \`;
 
+  toggleFooter(false);
+
+  // Sticky "+ Add expense" launcher (only once there are 2+ people)
+  setStickyBar(has2 ? \`
+    <div class="fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-white via-white to-transparent pt-6">
+      <div class="max-w-2xl mx-auto px-5 sticky-bar">
+        <button onclick="openExpenseSheet()" class="w-full flex items-center justify-center gap-2 bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white font-semibold py-3.5 rounded-2xl text-base shadow-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+          Add expense
+        </button>
+      </div>
+    </div>
+  \` : '');
+
   if (has2 && hasExp) loadSettlements();
+}
+
+// ── Add-expense bottom sheet ─────────────────────────────────────────────────────
+
+function setStickyBar(html) {
+  const el = document.getElementById('stickyBar');
+  if (el) el.innerHTML = html || '';
+}
+
+// Show the static SEO/about footer on the home view only
+function toggleFooter(show) {
+  const f = document.getElementById('seoFooter');
+  if (f) f.style.display = show ? '' : 'none';
+}
+
+function expenseFormHTML() {
+  return \`
+    <div class="flex gap-2">
+      <input id="expDesc" type="text" placeholder="What for?" maxlength="100"
+        class="flex-1 border border-gray-200 rounded-lg px-3 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400"
+        onkeydown="if(event.key==='Enter') document.getElementById('expAmount').focus()">
+      <div class="relative w-28">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">$</span>
+        <input id="expAmount" type="number" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01"
+          class="w-full border border-gray-200 rounded-lg pl-6 pr-2 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900"
+          onkeydown="if(event.key==='Enter') addExpense()">
+      </div>
+    </div>
+    <div>
+      <div class="text-xs font-medium text-gray-500 mb-2">Paid by</div>
+      <div id="payerChips" class="flex flex-wrap gap-2">\${buildPayerChips()}</div>
+    </div>
+    <div>
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-medium text-gray-500">Split between</span>
+        <button onclick="toggleAllSplit()" class="text-sm font-medium text-blue-600 hover:text-blue-700">Toggle all</button>
+      </div>
+      <div id="splitChips" class="flex flex-wrap gap-2">\${buildSplitChips()}</div>
+    </div>
+    <button onclick="addExpense()" class="w-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white font-semibold py-3 rounded-2xl text-base transition-colors">
+      Add expense
+    </button>
+    <div id="expenseToast" class="text-center text-sm font-medium text-green-600 h-5"></div>
+  \`;
+}
+
+function openExpenseSheet() {
+  closeExpenseSheet();
+  const overlay = document.createElement('div');
+  overlay.id = 'expenseSheet';
+  overlay.className = 'fixed inset-0 z-50 flex items-end justify-center bg-black/40 fade-in';
+  overlay.innerHTML = \`
+    <div class="slide-up bg-white w-full max-w-2xl rounded-t-2xl sheet-pad max-h-[88vh] overflow-y-auto">
+      <div class="sticky top-0 bg-white flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+        <span class="text-base font-bold text-gray-900">Add an expense</span>
+        <button onclick="closeExpenseSheet()" class="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="px-5 pt-4 space-y-4">\${expenseFormHTML()}</div>
+    </div>
+  \`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeExpenseSheet(); });
+  setTimeout(() => document.getElementById('expDesc')?.focus(), 50);
+}
+
+function closeExpenseSheet() {
+  document.getElementById('expenseSheet')?.remove();
+}
+
+// Full-screen receipt viewer (lightbox)
+function openImage(url, caption) {
+  document.getElementById('imageViewer')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'imageViewer';
+  overlay.className = 'fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4 fade-in';
+  overlay.innerHTML = \`
+    <button onclick="document.getElementById('imageViewer').remove()" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <img src="\${url}" class="max-w-full max-h-[82vh] rounded-lg object-contain shadow-2xl" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'text-white/70 text-sm',textContent:'Preview unavailable'}))">
+    \${caption ? \`<div class="mt-3 text-sm text-white/80 max-w-full truncate px-4">\${caption}</div>\` : ''}
+  \`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 // ── Receipts ───────────────────────────────────────────────────────────────────
@@ -482,11 +655,11 @@ function renderReceiptsSection(p, editable) {
     const canExtractThis = editable && (r.status === 'pending' || r.status === 'error');
     return \`
       <div class="flex items-center gap-3 px-4 py-2.5 \${editable ? 'hover:bg-gray-50' : ''} transition-colors">
-        <div class="w-9 h-9 shrink-0 rounded-lg overflow-hidden border border-gray-100 bg-gray-100 flex items-center justify-center">
+        <button onclick="openImage('\${imgUrl}', '\${escHtml(r.filename).replace(/'/g, \"\\\\'\")}')" title="View receipt" class="w-9 h-9 shrink-0 rounded-lg overflow-hidden border border-gray-100 bg-gray-100 flex items-center justify-center cursor-zoom-in hover:ring-2 hover:ring-gray-300 transition-all">
           <img src="\${imgUrl}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none'">
-        </div>
+        </button>
         <div class="flex-1 min-w-0">
-          <div class="text-xs font-medium text-gray-700 truncate">\${escHtml(r.filename)}</div>
+          <button onclick="openImage('\${imgUrl}', '\${escHtml(r.filename).replace(/'/g, \"\\\\'\")}')" class="text-xs font-medium text-gray-700 truncate hover:text-blue-600 transition-colors block max-w-full text-left">\${escHtml(r.filename)}</button>
           <div class="text-[10px] text-gray-400">\${timeAgo(r.uploadedAt)}</div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
@@ -543,6 +716,7 @@ function renderReceiptsSection(p, editable) {
 // ── Sealed view ────────────────────────────────────────────────────────────────
 
 function renderSealedParty(p) {
+  setStickyBar(''); closeExpenseSheet(); toggleFooter(false);
   const peopleMap = Object.fromEntries(p.people.map(pr => [pr.id, pr.name]));
   const receipts = p.receipts || [];
   const total = p.expenses.reduce((s, e) => s + e.amount, 0);
@@ -629,7 +803,25 @@ async function addExpense() {
     description: desc, amount, paidBy, splitBetween: isAll ? [] : splitArr
   });
   if (res.error) return alert(res.error);
-  currentParty = res; formSplitSet = null; renderParty();
+  currentParty = res;
+  formSplitSet = null;
+  formPayer = null;
+
+  const sheetOpen = !!document.getElementById('expenseSheet');
+  renderParty(); // refresh the page (settlement + list) behind the sheet
+
+  if (sheetOpen) {
+    // Keep the sheet open for rapid multi-entry: clear inputs, reset chips, confirm.
+    const d = document.getElementById('expDesc');
+    const a = document.getElementById('expAmount');
+    if (d) d.value = '';
+    if (a) a.value = '';
+    const pc = document.getElementById('payerChips'); if (pc) pc.innerHTML = buildPayerChips();
+    const sc = document.getElementById('splitChips'); if (sc) sc.innerHTML = buildSplitChips();
+    const toast = document.getElementById('expenseToast');
+    if (toast) { toast.textContent = 'Added ✓'; setTimeout(() => { if (toast) toast.textContent = ''; }, 1600); }
+    d?.focus();
+  }
 }
 
 async function removeExpense(eid) {
@@ -703,11 +895,10 @@ async function deleteReceipt(rid) {
 }
 
 function useReceiptAmount(amount) {
+  openExpenseSheet();
   const el = document.getElementById('expAmount');
-  if (!el) return;
-  el.value = amount.toFixed(2);
-  document.getElementById('expDesc')?.focus();
-  el.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (el) el.value = amount.toFixed(2);
+  setTimeout(() => document.getElementById('expDesc')?.focus(), 60);
 }
 
 // ── Settlement ─────────────────────────────────────────────────────────────────
@@ -774,7 +965,7 @@ function showLinkModal(title, desc, url) {
       <p class="text-sm text-gray-500 mb-4">\${desc}</p>
       <div class="flex gap-2">
         <input value="\${url}" readonly class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none">
-        <button onclick="copyUrl('\${url}', this)" class="bg-black hover:bg-gray-800 text-white text-sm px-3 py-2 rounded-lg shrink-0">Copy</button>
+        <button onclick="copyUrl('\${url}', this)" class="bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white text-sm px-3 py-2 rounded-lg shrink-0">Copy</button>
       </div>
       <button onclick="this.closest('.fixed').remove()" class="mt-4 w-full text-sm text-gray-400 hover:text-gray-600">Close</button>
     </div>
@@ -808,6 +999,7 @@ async function loadSnapshot(id) {
 }
 
 function renderSnapshot(snap) {
+  setStickyBar(''); closeExpenseSheet(); toggleFooter(false);
   const p = snap.party;
   const pm = Object.fromEntries(p.people.map(pr => [pr.id, pr.name]));
   const receipts = p.receipts || [];
@@ -874,7 +1066,7 @@ function showConfirm(title, message, label, onConfirm) {
       <p class="text-sm text-gray-500 mb-5">\${message}</p>
       <div class="flex gap-2">
         <button onclick="document.getElementById('confirmOverlay').remove()" class="flex-1 border border-gray-200 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-        <button onclick="_doConfirm()" class="flex-1 bg-black hover:bg-gray-800 text-white py-2 rounded-lg text-sm font-medium">\${label}</button>
+        <button onclick="_doConfirm()" class="flex-1 bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white py-2 rounded-lg text-sm font-medium">\${label}</button>
       </div>
     </div>
   \`;
@@ -890,6 +1082,7 @@ async function _doConfirm() {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function showLoading() {
+  setStickyBar(''); toggleFooter(false);
   document.getElementById('app').innerHTML = \`<div class="flex justify-center py-20"><div class="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full spin"></div></div>\`;
 }
 function showError(msg) {

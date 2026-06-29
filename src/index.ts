@@ -3,12 +3,103 @@ import { nanoid } from 'nanoid';
 import type { Env, Party, Receipt, Snapshot } from './types';
 import { calculateSettlements } from './settle';
 import { getAppHTML } from './html';
+import { OG_PNG_B64 } from './og';
 
 const app = new Hono<{ Bindings: Env }>();
 
 // ── Frontend ──────────────────────────────────────────────────────────────────
 
-app.get('/', c => c.html(getAppHTML()));
+app.get('/', c => {
+  c.header('Cache-Control', 'public, max-age=300');
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  return c.html(getAppHTML());
+});
+
+// ── SEO / discoverability ─────────────────────────────────────────────────────
+
+const SITE_URL = 'https://splitter.xajik0.workers.dev';
+
+app.get('/robots.txt', c =>
+  c.text(
+    [
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /api/',
+      'Disallow: /receipt/',
+      '',
+      'Sitemap: ' + SITE_URL + '/sitemap.xml',
+      '',
+    ].join('\n'),
+    200,
+    { 'Cache-Control': 'public, max-age=86400' }
+  )
+);
+
+app.get('/sitemap.xml', c => {
+  const today = new Date().toISOString().slice(0, 10);
+  const xml =
+    '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    '  <url>\n' +
+    '    <loc>' + SITE_URL + '/</loc>\n' +
+    '    <lastmod>' + today + '</lastmod>\n' +
+    '    <changefreq>weekly</changefreq>\n' +
+    '    <priority>1.0</priority>\n' +
+    '  </url>\n' +
+    '</urlset>\n';
+  return c.body(xml, 200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' });
+});
+
+app.get('/manifest.webmanifest', c => {
+  const manifest = {
+    name: 'Splitter — Bill & Expense Splitter',
+    short_name: 'Splitter',
+    description: 'Split bills and shared expenses with friends. See who owes whom instantly. Free, no sign-up.',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    background_color: '#f4f4f5',
+    theme_color: '#1c1c1e',
+    icons: [{ src: '/favicon.svg', type: 'image/svg+xml', sizes: 'any', purpose: 'any maskable' }],
+  };
+  return c.body(JSON.stringify(manifest), 200, { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=86400' });
+});
+
+app.get('/favicon.svg', c => {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+    '<rect width="32" height="32" rx="8" fill="#1c1c1e"/>' +
+    '<g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round">' +
+    '<path d="M9 11h14"/><path d="M9 16h8"/><path d="M9 21h14"/></g></svg>';
+  return c.body(svg, 200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'public, max-age=604800' });
+});
+
+app.get('/og.svg', c => {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">' +
+    '<rect width="1200" height="630" fill="#f4f4f5"/>' +
+    '<rect x="90" y="90" width="96" height="96" rx="24" fill="#1c1c1e"/>' +
+    '<g fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round">' +
+    '<path d="M114 124h48"/><path d="M114 138h28"/><path d="M114 152h48"/></g>' +
+    '<text x="210" y="162" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="64" font-weight="700" fill="#18181b">Splitter</text>' +
+    '<text x="92" y="300" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="72" font-weight="800" fill="#18181b">Split bills with friends.</text>' +
+    '<text x="92" y="392" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="72" font-weight="800" fill="#18181b">See who owes whom — instantly.</text>' +
+    '<text x="92" y="478" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="40" font-weight="500" fill="#71717a">Free online group expense calculator · no sign-up</text>' +
+    '<g transform="translate(92,520)">' +
+    '<rect width="150" height="56" rx="28" fill="#e0f2fe"/><text x="34" y="37" font-family="-apple-system,Segoe UI,Arial" font-size="30" font-weight="600" fill="#0369a1">Alice</text>' +
+    '<rect x="170" width="140" height="56" rx="28" fill="#f3e8ff"/><text x="204" y="37" font-family="-apple-system,Segoe UI,Arial" font-size="30" font-weight="600" fill="#7e22ce">Ben</text>' +
+    '<rect x="330" width="160" height="56" rx="28" fill="#fff7ed"/><text x="364" y="37" font-family="-apple-system,Segoe UI,Arial" font-size="30" font-weight="600" fill="#c2410c">Cleo</text>' +
+    '</g></svg>';
+  return c.body(svg, 200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'public, max-age=604800' });
+});
+
+app.get('/og.png', c => {
+  const bin = atob(OG_PNG_B64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return c.body(bytes.buffer, 200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=604800, immutable' });
+});
 
 // ── Receipt image serving ─────────────────────────────────────────────────────
 
