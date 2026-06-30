@@ -1,11 +1,12 @@
 import { TAILWIND_CSS } from './styles';
 
-export function getAppHTML(): string {
+export function getAppHTML(appKey: string = ''): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="app-key" content="${appKey}">
 
 <!-- Primary SEO -->
 <title>Splitter — Free Online Bill Splitter & Group Expense Calculator</title>
@@ -133,6 +134,7 @@ body { background: #f4f4f5; }
 
 <script>
 const API = '';
+const APP_KEY = document.querySelector('meta[name="app-key"]')?.content || '';
 let currentPartyId = null;
 let currentParty   = null;
 let formPayer      = null;
@@ -862,7 +864,7 @@ async function uploadReceipt(input) {
   if (file.size > 10 * 1024 * 1024) return alert('File too large (max 10 MB)');
   const fd = new FormData();
   fd.append('file', file);
-  const res = await fetch('/api/parties/' + currentPartyId + '/receipts', { method: 'POST', body: fd })
+  const res = await fetch('/api/parties/' + currentPartyId + '/receipts', { method: 'POST', body: fd, headers: { 'X-App-Key': APP_KEY } })
     .then(r => r.json()).catch(e => ({ error: String(e) }));
   if (res.error) return alert(res.error);
   currentParty = res; renderParty();
@@ -1104,7 +1106,7 @@ function escHtml(s) {
 }
 async function api(method, path, body) {
   try {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    const opts = { method, headers: { 'Content-Type': 'application/json', 'X-App-Key': APP_KEY } };
     if (body) opts.body = JSON.stringify(body);
     return await fetch(API + path, opts).then(r => r.json());
   } catch (e) { return { error: String(e) }; }

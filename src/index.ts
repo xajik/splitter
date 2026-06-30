@@ -7,13 +7,46 @@ import { OG_PNG_B64 } from './og';
 
 const app = new Hono<{ Bindings: Env }>();
 
+function clientIp(c: { req: { header: (k: string) => string | undefined } }): string {
+  return c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown';
+}
+
+// ── Security headers (all responses) ──────────────────────────────────────────
+app.use('*', async (c, next) => {
+  await next();
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+});
+
+// ── API gate (static key) ──────────────────────────────────────────────────────
+app.use('/api/*', async (c, next) => {
+  // Static-key gate: enforced only when APP_KEY is configured (so local dev works).
+  // The key is injected into the served page at runtime — a deterrent against
+  // direct/scripted API abuse, paired with the per-IP caps below on costly actions.
+  if (c.env.APP_KEY && c.req.header('X-App-Key') !== c.env.APP_KEY) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+  return next();
+});
+
+// Per-IP daily cap for an action (KV). Writes are bounded by `limit` (rejections
+// don't write), so this stays within the KV free-tier write quota. Approximate
+// (KV is eventually consistent) — fine as an abuse/cost backstop. Returns true if allowed.
+async function allowDaily(env: Env, ip: string, action: string, limit: number): Promise<boolean> {
+  const key = `rl:${action}:${new Date().toISOString().slice(0, 10)}:${ip}`;
+  const used = parseInt((await env.PARTIES.get(key)) ?? '0');
+  if (used >= limit) return false;
+  await env.PARTIES.put(key, String(used + 1), { expirationTtl: 86400 * 2 });
+  return true;
+}
+
 // ── Frontend ──────────────────────────────────────────────────────────────────
 
 app.get('/', c => {
   c.header('Cache-Control', 'public, max-age=300');
-  c.header('X-Content-Type-Options', 'nosniff');
-  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-  return c.html(getAppHTML());
+  return c.html(getAppHTML(c.env.APP_KEY ?? ''));
 });
 
 // ── SEO / discoverability ─────────────────────────────────────────────────────
@@ -118,6 +151,9 @@ app.get('/receipt/:partyId/:rid', async c => {
 // ── Party API ─────────────────────────────────────────────────────────────────
 
 app.post('/api/parties', async c => {
+  if (!await allowDaily(c.env, clientIp(c), 'create', 60)) {
+    return c.json({ error: 'Daily limit reached for creating parties. Try again tomorrow.' }, 429);
+  }
   const { name } = await c.req.json<{ name: string }>();
   if (!name?.trim()) return c.json({ error: 'Name is required' }, 400);
 
@@ -223,6 +259,9 @@ app.get('/api/parties/:id/settlements', async c => {
 // ── Receipts ──────────────────────────────────────────────────────────────────
 
 app.post('/api/parties/:id/receipts', async c => {
+  if (!await allowDaily(c.env, clientIp(c), 'upload', 100)) {
+    return c.json({ error: 'Daily upload limit reached. Try again tomorrow.' }, 429);
+  }
   const party = await getParty(c.env, c.req.param('id'));
   if (!party) return c.json({ error: 'Party not found' }, 404);
   if (party.sealed) return c.json({ error: 'Party is sealed' }, 403);
@@ -279,9 +318,13 @@ const DAILY_NEURON_LIMIT = 10_000;
 const NEURON_COST_PER_TOKEN = 3;       // conservative rate for 11B vision model
 const NEURON_COST_ESTIMATE = 2_000;    // fallback if usage not returned
 const NEURON_BUFFER = 500;             // don't go below this before blocking
+const PER_IP_DAILY_NEURONS = 6_000;    // one IP can't hog the shared daily budget (~3 scans)
 
 function todayKey() {
   return `ai:neurons:${new Date().toISOString().slice(0, 10)}`; // YYYY-MM-DD UTC
+}
+function todayIpKey(ip: string) {
+  return `ai:neurons:${new Date().toISOString().slice(0, 10)}:ip:${ip}`;
 }
 
 app.get('/api/ai/quota', async c => {
@@ -312,9 +355,18 @@ app.post('/api/parties/:id/receipts/:rid/extract', async c => {
     }, 429);
   }
 
+  // Per-IP daily cap so one client can't drain the shared budget
+  const ip = clientIp(c);
+  const ipKey = todayIpKey(ip);
+  const ipUsed = parseInt((await c.env.PARTIES.get(ipKey)) ?? '0');
+  if (ipUsed + NEURON_COST_ESTIMATE > PER_IP_DAILY_NEURONS) {
+    return c.json({ error: "You've reached your daily receipt-scan limit. Try again tomorrow." }, 429);
+  }
+
   // Commit budget BEFORE calling AI — ensures we never go over even on failure
   const neuronsAfter = neuronsUsed + NEURON_COST_ESTIMATE;
   await c.env.PARTIES.put(dayKey, String(neuronsAfter), { expirationTtl: 86400 * 2 });
+  await c.env.PARTIES.put(ipKey, String(ipUsed + NEURON_COST_ESTIMATE), { expirationTtl: 86400 * 2 });
 
   // Get image from R2
   const obj = await c.env.RECEIPTS.get(`${party.id}/${rid}`);

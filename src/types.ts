@@ -54,4 +54,7 @@ export interface Env {
   PARTIES: KVNamespace;
   RECEIPTS: R2Bucket;
   AI: Ai;
+  // Static API key (set via `wrangler secret put APP_KEY`); injected into the
+  // served page at runtime so the SPA can send it — never committed to the repo.
+  APP_KEY?: string;
 }
