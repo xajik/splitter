@@ -13,6 +13,8 @@ settle up — who owes whom and exactly how much. No sign-up, no app to install.
 - **Instant settlement** — greedy debt-minimisation shows who owes whom with the fewest transfers
 - **Receipts** — attach photos (up to 100 per party) and auto-extract the total with Workers AI
 - **Share & seal** — share a group with a link; seal it to produce an immutable, read-only snapshot
+- **Default name** — set your name once (stored locally) and you're added to every new group automatically
+- **Community stats** — global split distribution over time (day / week / month / year), aggregated across all users
 - **History** — recently visited parties are remembered locally (cookie) and shown on the home dashboard
 - **Mobile-first add flow** — sticky "+ Add expense" button opens a bottom sheet for fast, repeated entry
 - **PWA + SEO** — installable manifest, Open Graph/Twitter cards, JSON-LD, server-rendered landing
@@ -101,6 +103,7 @@ would be exceeded, extraction is blocked until midnight UTC.
 | POST | `/api/parties/:id/receipts/:rid/extract` | Extract total from a receipt (AI) |
 | GET | `/api/ai/quota` | Remaining daily AI quota |
 | GET | `/api/stats` | Global counters |
+| GET | `/api/stats/series` | Community split distribution over time (day/week/month/year) |
 | POST | `/api/summaries` | Batch party summaries (home list) |
 | GET | `/receipt/:partyId/:rid` | Serve a receipt image from R2 |
 | GET | `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`, `/favicon.svg`, `/og.svg`, `/og.png` | SEO / PWA assets |
@@ -116,6 +119,25 @@ with a headless Chromium screenshot and re-encode it into `src/og.ts`.
 
 > The biggest remaining ranking lever is a **custom domain** + verification in
 > **Google Search Console** with the sitemap submitted — `*.workers.dev` caps rankings.
+
+## Security & abuse protection
+
+- **No secrets in the client or repo** — KV/R2/AI are Cloudflare *bindings*. The one
+  secret, `APP_KEY`, is set via `wrangler secret put APP_KEY` and injected into the page
+  at runtime (never committed).
+- **API key gate** — `/api/*` requires the `X-App-Key` header (enforced only when
+  `APP_KEY` is set, so local dev works). It's a deterrent against direct/scripted abuse;
+  because a public SPA must send it, it is *not* a defense against a determined attacker.
+- **Per-IP daily caps (KV)** on costly actions — party creation and receipt uploads;
+  rejections don't write, so the limiter stays within the KV write quota.
+- **AI cost cap** — a daily neuron budget (global + per-IP) is *committed before* each
+  vision call, so spend can never exceed the cap even on failures/retries.
+- **Security headers** on every response: `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy`, `X-Frame-Options: DENY`, `Permissions-Policy`.
+- **Input limits** — field-length caps, positive-amount checks, 10 MB upload limit,
+  MIME allowlist, ≤ 100 receipts/party.
+
+> To set the API key: `npx wrangler secret put APP_KEY` (paste a random value, e.g. `openssl rand -hex 24`).
 
 ---
 

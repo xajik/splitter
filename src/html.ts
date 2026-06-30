@@ -87,12 +87,16 @@ body { background: #f4f4f5; }
   </div>
 </noscript>
 
-<header class="max-w-2xl mx-auto px-5 pt-5 pb-2">
+<header class="max-w-2xl mx-auto px-5 pt-5 pb-2 flex items-center justify-between gap-3">
   <button onclick="goHome()" class="flex items-center gap-2 font-bold text-lg tracking-tight text-gray-900 hover:opacity-70 transition-opacity">
     <span class="w-6 h-6 bg-[#1c1c1e] rounded-lg flex items-center justify-center">
       <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 8h10M7 12h6m-6 4h10"/></svg>
     </span>
     Splitter
+  </button>
+  <button id="nameBtn" onclick="showNameModal()" class="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:border-gray-300 rounded-full pl-2.5 pr-3 py-1.5 shadow-sm transition-colors max-w-[55%]">
+    <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+    <span id="nameBtnLabel" class="truncate">Hi, your name</span>
   </button>
 </header>
 
@@ -218,8 +222,54 @@ function route() {
   renderHome();
 }
 window.addEventListener('hashchange', route);
-window.addEventListener('load', route);
+window.addEventListener('load', () => { renderNameBtn(); route(); });
 function goHome() { location.hash = '/'; }
+
+// ── Default user name (stored locally; auto-added to new groups) ──────────────────
+
+function getUserName() {
+  try { return (localStorage.getItem('splitter_name') || '').trim(); } catch { return ''; }
+}
+function renderNameBtn() {
+  const label = document.getElementById('nameBtnLabel');
+  if (!label) return;
+  const name = getUserName();
+  label.textContent = name ? 'Hi, ' + name : 'Hi, your name';
+  label.classList.toggle('text-gray-400', !name);
+}
+function showNameModal() {
+  const current = getUserName();
+  const overlay = document.createElement('div');
+  overlay.id = 'nameModal';
+  overlay.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 fade-in';
+  overlay.innerHTML = \`
+    <div class="slide-up bg-white w-full max-w-sm rounded-t-2xl sm:rounded-2xl p-6 sheet-pad">
+      <h3 class="text-base font-bold text-gray-900 mb-1">Your name</h3>
+      <p class="text-sm text-gray-500 mb-4">We'll add you to new groups automatically. Stored on this device only.</p>
+      <input id="nameInput" type="text" maxlength="50" placeholder="e.g. Alex" value="\${escHtml(current)}"
+        class="w-full border border-gray-200 rounded-xl px-3 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400 mb-4"
+        onkeydown="if(event.key==='Enter') saveUserName()">
+      <div class="flex gap-2">
+        \${current ? '<button onclick="clearUserName()" class="px-4 py-3 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">Clear</button>' : ''}
+        <button onclick="this.closest('.fixed').remove()" class="flex-1 border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
+        <button onclick="saveUserName()" class="flex-1 bg-[#1c1c1e] hover:bg-[#2c2c2e] text-white py-3 rounded-xl text-sm font-semibold transition-colors">Save</button>
+      </div>
+    </div>\`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  setTimeout(() => document.getElementById('nameInput')?.focus(), 50);
+}
+function saveUserName() {
+  const v = (document.getElementById('nameInput')?.value || '').trim().slice(0, 50);
+  try { if (v) localStorage.setItem('splitter_name', v); else localStorage.removeItem('splitter_name'); } catch {}
+  document.getElementById('nameModal')?.remove();
+  renderNameBtn();
+}
+function clearUserName() {
+  try { localStorage.removeItem('splitter_name'); } catch {}
+  document.getElementById('nameModal')?.remove();
+  renderNameBtn();
+}
 
 // ── History (cookies) ────────────────────────────────────────────────────────
 
@@ -277,6 +327,15 @@ function renderHome() {
       <div class="border-t border-gray-200 pt-5">
         <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-3 text-center">Splitter community, all time</div>
         <div id="globalStats" class="flex items-center justify-between"></div>
+
+        <!-- Community split distribution over time -->
+        <div class="mt-6">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[11px] uppercase tracking-wider text-gray-400">Split over time</span>
+            <div id="seriesToggle" class="flex gap-1 text-xs"></div>
+          </div>
+          <div id="seriesChart" class="text-sm text-gray-400">Loading…</div>
+        </div>
       </div>
 
     </div>
@@ -288,17 +347,53 @@ function renderHome() {
 async function loadHomeData() {
   const hist = getHistory();
 
-  const [sumRes, stats] = await Promise.all([
+  const [sumRes, stats, series] = await Promise.all([
     hist.length
       ? api('POST', '/api/summaries', { items: hist.map(h => ({ id: h.id, type: h.type })) })
       : Promise.resolve({ summaries: [] }),
     api('GET', '/api/stats'),
+    api('GET', '/api/stats/series'),
   ]);
 
   const summaries = (sumRes && sumRes.summaries) || [];
   renderRecentList(summaries);
   renderStatsCard(summaries);
   renderGlobalStats(stats || {});
+
+  seriesData = (series && !series.error) ? series : null;
+  renderSeriesToggle();
+  renderSeriesChart();
+}
+
+// ── Community split-over-time chart ──────────────────────────────────────────────
+let seriesData = null;
+let seriesGran = 'day';
+const SERIES_GRANS = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year']];
+
+function renderSeriesToggle() {
+  const el = document.getElementById('seriesToggle');
+  if (!el) return;
+  el.innerHTML = SERIES_GRANS.map(([g, label]) => {
+    const on = g === seriesGran;
+    return \`<button onclick="setSeriesGran('\${g}')" class="px-2 py-0.5 rounded-full font-medium transition-colors \${on ? 'bg-[#1c1c1e] text-white' : 'text-gray-500 hover:bg-gray-100'}">\${label}</button>\`;
+  }).join('');
+}
+function setSeriesGran(g) { seriesGran = g; renderSeriesToggle(); renderSeriesChart(); }
+
+function renderSeriesChart() {
+  const el = document.getElementById('seriesChart');
+  if (!el) return;
+  const pts = seriesData && seriesData[seriesGran];
+  if (!pts || !pts.length) { el.innerHTML = '<p class="text-sm text-gray-400">No activity yet.</p>'; return; }
+  const max = Math.max(...pts.map(p => p.amount), 0);
+  el.innerHTML = \`<div class="space-y-1.5">\${pts.map(p => {
+    const pct = max > 0 ? Math.max(2, Math.round((p.amount / max) * 100)) : 0;
+    return \`<div class="flex items-center gap-3">
+      <span class="w-10 shrink-0 text-xs text-gray-400 text-right tabular-nums">\${escHtml(p.t)}</span>
+      <div class="flex-1 h-5 bg-gray-100 rounded-md overflow-hidden"><div class="h-full bg-[#1c1c1e] rounded-md transition-all" style="width:\${pct}%"></div></div>
+      <span class="w-16 shrink-0 text-xs font-medium text-gray-700 text-right tabular-nums">\${fmtCompact(p.amount)}</span>
+    </div>\`;
+  }).join('')}</div>\`;
 }
 
 function renderRecentList(summaries) {
@@ -404,6 +499,9 @@ async function createParty() {
   btn.disabled = true; btn.innerHTML = 'Creating…';
   const res = await api('POST', '/api/parties', { name });
   if (res.error) { btn.disabled = false; btn.textContent = 'Create'; return alert(res.error); }
+  // Auto-add the default user to the new group, if a name is set
+  const me = getUserName();
+  if (me) await api('POST', '/api/parties/' + res.id + '/people', { name: me });
   addToHistory({ id: res.id, name: res.name, date: Date.now(), type: 'party' });
   location.hash = '/party/' + res.id;
 }

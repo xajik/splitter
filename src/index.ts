@@ -454,6 +454,17 @@ app.get('/api/stats', async c => {
   });
 });
 
+// Community split distribution over time (aggregated from all users): time + amount
+app.get('/api/stats/series', async c => {
+  const now = new Date();
+  const series = await Promise.all((['day', 'week', 'month', 'year'] as const).map(async g => {
+    const points = buildPeriods(now, g);
+    const vals = await Promise.all(points.map(p => c.env.PARTIES.get(`stats:t:${g}:${p.key}`)));
+    return [g, points.map((p, i) => ({ t: p.label, amount: parseFloat(vals[i] ?? '0') }))] as const;
+  }));
+  return c.json(Object.fromEntries(series));
+});
+
 // Fetch lightweight summaries for a list of party/snapshot ids (home recent list)
 app.post('/api/summaries', async c => {
   const { items } = await c.req.json<{ items: { id: string; type: string }[] }>();
@@ -496,14 +507,69 @@ app.post('/api/summaries', async c => {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function bumpGlobalStats(env: Env, amount: number): Promise<void> {
-  const [bills, money] = await Promise.all([
-    env.PARTIES.get('stats:bills'),
-    env.PARTIES.get('stats:money'),
-  ]);
+  const keys = ['stats:bills', 'stats:money', ...periodKeys(new Date())];
+  const vals = await Promise.all(keys.map(k => env.PARTIES.get(k)));
   await Promise.all([
-    env.PARTIES.put('stats:bills', String(parseInt(bills ?? '0') + 1)),
-    env.PARTIES.put('stats:money', String(Math.round((parseFloat(money ?? '0') + amount) * 100) / 100)),
+    env.PARTIES.put('stats:bills', String(parseInt(vals[0] ?? '0') + 1)),
+    env.PARTIES.put('stats:money', String(addMoney(vals[1], amount))),
+    // Time buckets (day/week/month/year): sum of amounts split per period
+    ...periodKeys(new Date()).map((k, i) => env.PARTIES.put(k, String(addMoney(vals[2 + i], amount)))),
   ]);
+}
+
+function addMoney(prev: string | null, amount: number): number {
+  return Math.round((parseFloat(prev ?? '0') + amount) * 100) / 100;
+}
+
+// Bucket keys for a date: [day, week, month, year]
+function periodKeys(d: Date): string[] {
+  const iso = d.toISOString();
+  return [
+    `stats:t:day:${iso.slice(0, 10)}`,
+    `stats:t:week:${isoWeek(d)}`,
+    `stats:t:month:${iso.slice(0, 7)}`,
+    `stats:t:year:${iso.slice(0, 4)}`,
+  ];
+}
+
+function isoWeek(date: Date): string {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7;       // Mon=0..Sun=6
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);     // shift to Thursday of this week
+  const firstThu = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const week = 1 + Math.round(((d.getTime() - firstThu.getTime()) / 86400000 - 3 + ((firstThu.getUTCDay() + 6) % 7)) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Recent period buckets (oldest→newest) with display labels, per granularity.
+function buildPeriods(now: Date, g: 'day' | 'week' | 'month' | 'year'): { key: string; label: string }[] {
+  const out: { key: string; label: string }[] = [];
+  if (g === 'day') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
+      out.push({ key: d.toISOString().slice(0, 10), label: DOW[d.getUTCDay()] });
+    }
+  } else if (g === 'week') {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i * 7));
+      const wk = isoWeek(d);
+      out.push({ key: wk, label: 'W' + wk.slice(-2) });
+    }
+  } else if (g === 'month') {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      out.push({ key: d.toISOString().slice(0, 7), label: MON[d.getUTCMonth()] });
+    }
+  } else {
+    for (let i = 2; i >= 0; i--) {
+      const y = now.getUTCFullYear() - i;
+      out.push({ key: String(y), label: String(y) });
+    }
+  }
+  return out;
 }
 
 async function getParty(env: Env, id: string): Promise<Party | null> {
