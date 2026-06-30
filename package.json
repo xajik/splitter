@@ -8,10 +8,15 @@
     "typecheck": "tsc --noEmit",
     "build:css": "node scripts/build-css.mjs"
   },
-  "keywords": [],
+  "keywords": [
+    "bill-splitter",
+    "expense-splitter",
+    "cloudflare-workers",
+    "hono"
+  ],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Free online bill splitter & group expense calculator on Cloudflare Workers.",
   "dependencies": {
     "hono": "^4.12.25",
     "nanoid": "^5.1.11"
