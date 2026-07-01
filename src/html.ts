@@ -328,12 +328,13 @@ function renderHome() {
         <div class="text-[11px] uppercase tracking-wider text-gray-400 mb-3 text-center">Splitter community, all time</div>
         <div id="globalStats" class="flex items-center justify-between"></div>
 
-        <!-- Community split distribution over time -->
+        <!-- Community split distribution over time (aggregated across all users) -->
         <div class="mt-6">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center justify-between mb-1">
             <span class="text-[11px] uppercase tracking-wider text-gray-400">Split over time</span>
             <div id="seriesToggle" class="flex gap-1 text-xs"></div>
           </div>
+          <div class="text-[11px] text-gray-400 mb-3">Total split by everyone using Splitter</div>
           <div id="seriesChart" class="text-sm text-gray-400">Loading…</div>
         </div>
       </div>
